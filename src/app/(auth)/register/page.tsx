@@ -15,7 +15,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -50,7 +50,7 @@ const step2Schema = z.object({
 
 type Step2FormData = z.infer<typeof step2Schema>
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState<1 | 2>(1)
@@ -152,6 +152,256 @@ export default function RegisterPage() {
   }
 
   return (
+    <div className="bg-white rounded-xl shadow-lg p-8">
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      {/* Step 1: User Details */}
+      {step === 1 && (
+        <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-4">
+          {/* Role Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              I want to
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="relative">
+                <input
+                  type="radio"
+                  value="CUSTOMER"
+                  {...step1Form.register('role')}
+                  className="peer sr-only"
+                />
+                <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-blue-200 peer-checked:border-blue-600 peer-checked:bg-blue-50">
+                  <div className="text-2xl mb-1">🏠</div>
+                  <div className="text-sm font-medium">Buy</div>
+                </div>
+              </label>
+              <label className="relative">
+                <input
+                  type="radio"
+                  value="PROMOTER"
+                  {...step1Form.register('role')}
+                  className="peer sr-only"
+                />
+                <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-green-200 peer-checked:border-green-600 peer-checked:bg-green-50">
+                  <div className="text-2xl mb-1">💼</div>
+                  <div className="text-sm font-medium">Sell</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Full Name */}
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              {...step1Form.register('fullName')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="John Doe"
+            />
+            {step1Form.formState.errors.fullName && (
+              <p className="mt-1 text-sm text-red-600">
+                {step1Form.formState.errors.fullName.message}
+              </p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              {...step1Form.register('email')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="john@example.com"
+            />
+            {step1Form.formState.errors.email && (
+              <p className="mt-1 text-sm text-red-600">
+                {step1Form.formState.errors.email.message}
+              </p>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              {...step1Form.register('phone')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="+919876543210"
+            />
+            {step1Form.formState.errors.phone && (
+              <p className="mt-1 text-sm text-red-600">
+                {step1Form.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              {...step1Form.register('password')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Min 6 characters"
+            />
+            {step1Form.formState.errors.password && (
+              <p className="mt-1 text-sm text-red-600">
+                {step1Form.formState.errors.password.message}
+              </p>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              {...step1Form.register('confirmPassword')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Re-enter password"
+            />
+            {step1Form.formState.errors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-600">
+                {step1Form.formState.errors.confirmPassword.message}
+              </p>
+            )}
+          </div>
+
+          {/* Terms Checkbox */}
+          <div className="flex items-start">
+            <input
+              id="agreeToTerms"
+              type="checkbox"
+              {...step1Form.register('agreeToTerms')}
+              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="agreeToTerms" className="ml-2 text-sm text-gray-600">
+              I agree to the{' '}
+              <Link href="/legal/terms" className="text-blue-600 hover:underline">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/legal/privacy" className="text-blue-600 hover:underline">
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
+          {step1Form.formState.errors.agreeToTerms && (
+            <p className="text-sm text-red-600">
+              {step1Form.formState.errors.agreeToTerms.message}
+            </p>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating Account...' : 'Continue'}
+          </button>
+        </form>
+      )}
+
+      {/* Step 2: OTP Verification */}
+      {step === 2 && (
+        <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-4">
+          <div className="text-center mb-6">
+            <p className="text-sm text-gray-600">
+              We've sent a 6-digit code to
+              <br />
+              <span className="font-medium text-gray-900">{step1Data?.phone}</span>
+            </p>
+          </div>
+
+          {/* OTP Input */}
+          <div>
+            <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
+              Enter OTP
+            </label>
+            <input
+              id="otp"
+              type="text"
+              maxLength={6}
+              {...step2Form.register('otp')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
+              placeholder="000000"
+            />
+            {step2Form.formState.errors.otp && (
+              <p className="mt-1 text-sm text-red-600">
+                {step2Form.formState.errors.otp.message}
+              </p>
+            )}
+          </div>
+
+          {/* Resend OTP */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                if (step1Data) {
+                  sendOtp(step1Data.phone)
+                }
+              }}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Didn't receive code? Resend
+            </button>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Verifying...' : 'Verify & Continue'}
+          </button>
+
+          {/* Back Button */}
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="w-full text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-100"
+          >
+            Back
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
+
+export default function RegisterPage() {
+  const [step, setStep] = useState<1 | 2>(1)
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
@@ -194,250 +444,10 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          {/* Step 1: User Details */}
-          {step === 1 && (
-            <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-4">
-              {/* Role Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  I want to
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="relative">
-                    <input
-                      type="radio"
-                      value="CUSTOMER"
-                      {...step1Form.register('role')}
-                      className="peer sr-only"
-                    />
-                    <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-blue-200 peer-checked:border-blue-600 peer-checked:bg-blue-50">
-                      <div className="text-2xl mb-1">🏠</div>
-                      <div className="text-sm font-medium">Buy</div>
-                    </div>
-                  </label>
-                  <label className="relative">
-                    <input
-                      type="radio"
-                      value="PROMOTER"
-                      {...step1Form.register('role')}
-                      className="peer sr-only"
-                    />
-                    <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-green-200 peer-checked:border-green-600 peer-checked:bg-green-50">
-                      <div className="text-2xl mb-1">💼</div>
-                      <div className="text-sm font-medium">Sell</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Full Name */}
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  {...step1Form.register('fullName')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="John Doe"
-                />
-                {step1Form.formState.errors.fullName && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step1Form.formState.errors.fullName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  {...step1Form.register('email')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="john@example.com"
-                />
-                {step1Form.formState.errors.email && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step1Form.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  {...step1Form.register('phone')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+919876543210"
-                />
-                {step1Form.formState.errors.phone && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step1Form.formState.errors.phone.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Password */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  {...step1Form.register('password')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Min 6 characters"
-                />
-                {step1Form.formState.errors.password && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step1Form.formState.errors.password.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  {...step1Form.register('confirmPassword')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Re-enter password"
-                />
-                {step1Form.formState.errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step1Form.formState.errors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Terms Checkbox */}
-              <div className="flex items-start">
-                <input
-                  id="agreeToTerms"
-                  type="checkbox"
-                  {...step1Form.register('agreeToTerms')}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="agreeToTerms" className="ml-2 text-sm text-gray-600">
-                  I agree to the{' '}
-                  <Link href="/legal/terms" className="text-blue-600 hover:underline">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/legal/privacy" className="text-blue-600 hover:underline">
-                    Privacy Policy
-                  </Link>
-                </label>
-              </div>
-              {step1Form.formState.errors.agreeToTerms && (
-                <p className="text-sm text-red-600">
-                  {step1Form.formState.errors.agreeToTerms.message}
-                </p>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Creating Account...' : 'Continue'}
-              </button>
-            </form>
-          )}
-
-          {/* Step 2: OTP Verification */}
-          {step === 2 && (
-            <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-4">
-              <div className="text-center mb-6">
-                <p className="text-sm text-gray-600">
-                  We've sent a 6-digit code to
-                  <br />
-                  <span className="font-medium text-gray-900">{step1Data?.phone}</span>
-                </p>
-              </div>
-
-              {/* OTP Input */}
-              <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
-                  Enter OTP
-                </label>
-                <input
-                  id="otp"
-                  type="text"
-                  maxLength={6}
-                  {...step2Form.register('otp')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
-                  placeholder="000000"
-                />
-                {step2Form.formState.errors.otp && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {step2Form.formState.errors.otp.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Resend OTP */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (step1Data) {
-                      sendOtp(step1Data.phone)
-                    }
-                  }}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Didn't receive code? Resend
-                </button>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Verifying...' : 'Verify & Continue'}
-              </button>
-
-              {/* Back Button */}
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="w-full text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-100"
-              >
-                Back
-              </button>
-            </form>
-          )}
-        </div>
+        {/* Form Card with Suspense */}
+        <Suspense fallback={<div className="bg-white rounded-xl shadow-lg p-8 h-96 flex items-center justify-center">Loading...</div>}>
+          <RegisterForm />
+        </Suspense>
 
         {/* Login Link */}
         <div className="mt-6 text-center text-sm text-gray-600">

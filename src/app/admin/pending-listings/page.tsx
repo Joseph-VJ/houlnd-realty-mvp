@@ -93,7 +93,7 @@ export default function AdminPendingListingsPage() {
       const { error } = await supabase.rpc('approve_listing', {
         p_listing_id: listingId,
         p_admin_id: user!.id,
-      })
+      } as any)
 
       if (error) throw error
 
@@ -126,7 +126,7 @@ export default function AdminPendingListingsPage() {
         p_listing_id: rejectListingId,
         p_admin_id: user!.id,
         p_rejection_reason: rejectionReason.trim(),
-      })
+      } as any)
 
       if (error) throw error
 

@@ -132,12 +132,12 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
       }
 
       // Only show LIVE listings to customers, or show own listings to promoters
-      if (data.status !== 'LIVE' && (!user || data.promoter_id !== user.id)) {
+      if ((data as any).status !== 'LIVE' && (!user || (data as any).promoter_id !== user.id)) {
         setError('This property is not available')
         return
       }
 
-      setListing(data)
+      setListing(data as any)
     } catch (error) {
       console.error('Error fetching listing:', error)
       setError('Failed to load property details')
@@ -161,7 +161,7 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
       const { data, error } = await supabase.rpc('get_listing_contact', {
         p_listing_id: listingId,
         p_user_id: user.id,
-      })
+      } as any)
 
       if (error) throw error
 
@@ -216,7 +216,7 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
           .insert({
             user_id: user.id,
             listing_id: listingId,
-          })
+          } as any)
 
         if (error) throw error
       }

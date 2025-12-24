@@ -20,7 +20,7 @@ export function Step1Basic() {
     nextStep()
   }
 
-  const isValid = formData.total_price > 0 && formData.total_sqft > 0
+  const isValid = (formData.total_price || 0) > 0 && (formData.total_sqft || 0) > 0
 
   return (
     <form onSubmit={handleSubmit}>
@@ -84,8 +84,8 @@ export function Step1Basic() {
                 min="1"
               />
               <p className="text-xs text-gray-500 mt-1">
-                {formData.total_price > 0
-                  ? `₹${formData.total_price.toLocaleString('en-IN')}`
+                {(formData.total_price || 0) > 0
+                  ? `₹${(formData.total_price || 0).toLocaleString('en-IN')}`
                   : 'Enter the total selling price'}
               </p>
             </div>
@@ -105,18 +105,18 @@ export function Step1Basic() {
                 min="1"
               />
               <p className="text-xs text-gray-500 mt-1">
-                {formData.total_sqft > 0
-                  ? `${formData.total_sqft.toLocaleString('en-IN')} sq.ft`
+                {(formData.total_sqft || 0) > 0
+                  ? `${(formData.total_sqft || 0).toLocaleString('en-IN')} sq.ft`
                   : 'Enter the total area in square feet'}
               </p>
             </div>
 
             {/* Price per sq.ft (calculated) */}
-            {formData.total_price > 0 && formData.total_sqft > 0 && (
+            {(formData.total_price || 0) > 0 && (formData.total_sqft || 0) > 0 && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="text-sm text-gray-600">Price per sq.ft</div>
                 <div className="text-2xl font-bold text-green-600">
-                  ₹{Math.round(formData.total_price / formData.total_sqft).toLocaleString('en-IN')}
+                  ₹{Math.round((formData.total_price || 0) / (formData.total_sqft || 1)).toLocaleString('en-IN')}
                   /sq.ft
                 </div>
                 <div className="text-xs text-gray-500 mt-1">

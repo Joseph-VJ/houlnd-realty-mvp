@@ -13,7 +13,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
@@ -38,7 +38,7 @@ interface Listing {
 
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'ppsf_asc' | 'ppsf_desc'
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -75,7 +75,7 @@ export default function SearchPage() {
     try {
       const { data, error } = await supabase.rpc('get_popular_cities')
       if (error) throw error
-      setCities(data?.map((c: any) => c.city) || [])
+      setCities((data as any)?.map((c: any) => c.city) || [])
     } catch (error) {
       console.error('Error fetching cities:', error)
     }
@@ -189,7 +189,7 @@ export default function SearchPage() {
         // Save
         const { error } = await supabase
           .from('saved_properties')
-          .insert({ user_id: user.id, listing_id: listingId })
+          .insert({ user_id: user.id, listing_id: listingId } as any)
 
         if (error) throw error
 
@@ -213,6 +213,271 @@ export default function SearchPage() {
 
   const hasFilters =
     minPpsf || maxPpsf || city || propertyType || bedrooms || minPrice || maxPrice
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Search Properties</h1>
+        <p className="text-gray-600 mt-2">
+          Find your perfect property with transparent price per square foot
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Filters Sidebar */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">Filters</h3>
+                {hasFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {/* PRIMARY USP: Sq.ft Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    💰 Price per Sq.ft (PRIMARY FILTER)
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      value={minPpsf}
+                      onChange={(e) => setMinPpsf(e.target.value)}
+                      placeholder="Min ₹/sq.ft"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="number"
+                      value={maxPpsf}
+                      onChange={(e) => setMaxPpsf(e.target.value)}
+                      placeholder="Max ₹/sq.ft"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* City */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City
+                  </label>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Cities</option>
+                    {cities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Property Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Property Type
+                  </label>
+                  <select
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Types</option>
+                    <option value="PLOT">Plot</option>
+                    <option value="APARTMENT">Apartment</option>
+                    <option value="VILLA">Villa</option>
+                    <option value="HOUSE">House</option>
+                    <option value="LAND">Land</option>
+                    <option value="COMMERCIAL">Commercial</option>
+                  </select>
+                </div>
+
+                {/* Bedrooms */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bedrooms
+                  </label>
+                  <select
+                    value={bedrooms}
+                    onChange={(e) => setBedrooms(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Any</option>
+                    <option value="1">1 BHK</option>
+                    <option value="2">2 BHK</option>
+                    <option value="3">3 BHK</option>
+                    <option value="4">4 BHK</option>
+                    <option value="5">5+ BHK</option>
+                  </select>
+                </div>
+
+                {/* Total Price Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Total Price
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                      placeholder="Min Price"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="number"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      placeholder="Max Price"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Results */}
+        <div className="lg:col-span-3">
+          {/* Sort and Count */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="text-sm text-gray-600">
+              {loading ? 'Loading...' : `${listings.length} properties found`}
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="ppsf_asc">₹/sq.ft: Low to High</option>
+              <option value="ppsf_desc">₹/sq.ft: High to Low</option>
+            </select>
+          </div>
+
+          {/* Listings Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : listings.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-16">
+                  <div className="text-4xl mb-4">🔍</div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No properties found
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Try adjusting your filters to see more results.
+                  </p>
+                  {hasFilters && (
+                    <Button onClick={clearFilters}>Clear All Filters</Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {listings.map((listing) => (
+                <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {/* Image */}
+                  <div className="relative h-48 bg-gray-200">
+                    {listing.image_urls && listing.image_urls.length > 0 ? (
+                      <img
+                        src={listing.image_urls[0]}
+                        alt={`${listing.property_type} in ${listing.city}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🏠</div>
+                          <div className="text-sm">No image</div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Save Button */}
+                    <button
+                      onClick={() => handleSaveToggle(listing.id)}
+                      className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      title={savedPropertyIds.has(listing.id) ? 'Remove from saved' : 'Save property'}
+                    >
+                      <span className="text-xl">
+                        {savedPropertyIds.has(listing.id) ? '❤️' : '🤍'}
+                      </span>
+                    </button>
+                  </div>
+
+                  <CardContent className="pt-4">
+                    {/* Title */}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {listing.property_type} in {listing.city}
+                    </h3>
+                    {listing.locality && (
+                      <p className="text-sm text-gray-600 mb-3">{listing.locality}</p>
+                    )}
+
+                    {/* Price Badge */}
+                    <div className="mb-3">
+                      <Badge variant="info" className="text-base px-3 py-1">
+                        ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}/sq.ft
+                      </Badge>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-1 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Total Price:</span>
+                        <span className="font-medium">
+                          ₹{listing.total_price.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Area:</span>
+                        <span className="font-medium">
+                          {listing.total_sqft.toLocaleString('en-IN')} sq.ft
+                        </span>
+                      </div>
+                      {listing.bedrooms && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Bedrooms:</span>
+                          <span className="font-medium">{listing.bedrooms} BHK</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* View Button */}
+                    <Link href={`/property/${listing.id}`}>
+                      <Button className="w-full">View Details</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+export default function SearchPage() {
+  const { user } = useAuth()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -253,262 +518,9 @@ export default function SearchPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Search Properties</h1>
-          <p className="text-gray-600 mt-2">
-            Find your perfect property with transparent price per square foot
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-gray-900">Filters</h3>
-                  {hasFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Clear All
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {/* PRIMARY USP: Sq.ft Price */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      💰 Price per Sq.ft (PRIMARY FILTER)
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="number"
-                        value={minPpsf}
-                        onChange={(e) => setMinPpsf(e.target.value)}
-                        placeholder="Min ₹/sq.ft"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                        type="number"
-                        value={maxPpsf}
-                        onChange={(e) => setMaxPpsf(e.target.value)}
-                        placeholder="Max ₹/sq.ft"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* City */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
-                    </label>
-                    <select
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All Cities</option>
-                      {cities.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Property Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Property Type
-                    </label>
-                    <select
-                      value={propertyType}
-                      onChange={(e) => setPropertyType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">All Types</option>
-                      <option value="PLOT">Plot</option>
-                      <option value="APARTMENT">Apartment</option>
-                      <option value="VILLA">Villa</option>
-                      <option value="HOUSE">House</option>
-                      <option value="LAND">Land</option>
-                      <option value="COMMERCIAL">Commercial</option>
-                    </select>
-                  </div>
-
-                  {/* Bedrooms */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedrooms
-                    </label>
-                    <select
-                      value={bedrooms}
-                      onChange={(e) => setBedrooms(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any</option>
-                      <option value="1">1 BHK</option>
-                      <option value="2">2 BHK</option>
-                      <option value="3">3 BHK</option>
-                      <option value="4">4 BHK</option>
-                      <option value="5">5+ BHK</option>
-                    </select>
-                  </div>
-
-                  {/* Total Price Range */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Total Price
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="number"
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(e.target.value)}
-                        placeholder="Min Price"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                        type="number"
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                        placeholder="Max Price"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Results */}
-          <div className="lg:col-span-3">
-            {/* Sort and Count */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="text-sm text-gray-600">
-                {loading ? 'Loading...' : `${listings.length} properties found`}
-              </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="ppsf_asc">₹/sq.ft: Low to High</option>
-                <option value="ppsf_desc">₹/sq.ft: High to Low</option>
-              </select>
-            </div>
-
-            {/* Listings Grid */}
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : listings.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-16">
-                    <div className="text-4xl mb-4">🔍</div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      No properties found
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      Try adjusting your filters to see more results.
-                    </p>
-                    {hasFilters && (
-                      <Button onClick={clearFilters}>Clear All Filters</Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {listings.map((listing) => (
-                  <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    {/* Image */}
-                    <div className="relative h-48 bg-gray-200">
-                      {listing.image_urls && listing.image_urls.length > 0 ? (
-                        <img
-                          src={listing.image_urls[0]}
-                          alt={`${listing.property_type} in ${listing.city}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <div className="text-center">
-                            <div className="text-4xl mb-2">🏠</div>
-                            <div className="text-sm">No image</div>
-                          </div>
-                        </div>
-                      )}
-                      {/* Save Button */}
-                      <button
-                        onClick={() => handleSaveToggle(listing.id)}
-                        className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-                        title={savedPropertyIds.has(listing.id) ? 'Remove from saved' : 'Save property'}
-                      >
-                        <span className="text-xl">
-                          {savedPropertyIds.has(listing.id) ? '❤️' : '🤍'}
-                        </span>
-                      </button>
-                    </div>
-
-                    <CardContent className="pt-4">
-                      {/* Title */}
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {listing.property_type} in {listing.city}
-                      </h3>
-                      {listing.locality && (
-                        <p className="text-sm text-gray-600 mb-3">{listing.locality}</p>
-                      )}
-
-                      {/* Price Badge */}
-                      <div className="mb-3">
-                        <Badge variant="info" className="text-base px-3 py-1">
-                          ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}/sq.ft
-                        </Badge>
-                      </div>
-
-                      {/* Details */}
-                      <div className="space-y-1 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Total Price:</span>
-                          <span className="font-medium">
-                            ₹{listing.total_price.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Area:</span>
-                          <span className="font-medium">
-                            {listing.total_sqft.toLocaleString('en-IN')} sq.ft
-                          </span>
-                        </div>
-                        {listing.bedrooms && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Bedrooms:</span>
-                            <span className="font-medium">{listing.bedrooms} BHK</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* View Button */}
-                      <Link href={`/property/${listing.id}`}>
-                        <Button className="w-full">View Details</Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <Suspense fallback={<div className="flex justify-center py-20">Loading search...</div>}>
+          <SearchContent />
+        </Suspense>
       </main>
     </div>
   )

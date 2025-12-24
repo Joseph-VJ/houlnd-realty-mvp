@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     },
   });
 
-  const filtered = listings.filter((l) => {
+  const filtered = listings.filter((l: any) => {
     const ppsf = l.totalPrice / l.totalSqft;
     if (minPpsf !== null && ppsf < minPpsf) return false;
     if (maxPpsf !== null && ppsf > maxPpsf) return false;
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       totalSqft: Math.trunc(body.totalSqft!),
       priceType: body.priceType!,
       amenitiesJson:
-        body.amenities === undefined ? null : JSON.stringify(body.amenities),
+        body.amenities === undefined ? null : (body.amenities as any),
       amenitiesPrice:
         typeof body.amenitiesPrice === "number"
           ? Math.trunc(body.amenitiesPrice)

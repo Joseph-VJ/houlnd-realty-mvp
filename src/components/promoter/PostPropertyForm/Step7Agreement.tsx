@@ -23,7 +23,7 @@ export function Step7Agreement() {
     }
 
     // Set acceptance timestamp
-    setFormData({ agreement_accepted_at: new Date().toISOString() })
+    setFormData({ agreement_accepted_at: new Date() as any })
 
     nextStep()
   }
@@ -31,7 +31,7 @@ export function Step7Agreement() {
   const handleAcceptChange = (checked: boolean) => {
     setFormData({
       agreement_accepted: checked,
-      agreement_accepted_at: checked ? new Date().toISOString() : null,
+      agreement_accepted_at: checked ? new Date() as any : null,
     })
   }
 

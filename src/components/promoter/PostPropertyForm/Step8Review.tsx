@@ -88,7 +88,7 @@ export function Step8Review() {
         amenities_price: formData.amenities_price,
         image_urls: imageUrls,
         status: 'PENDING_VERIFICATION',
-      }).select().single()
+      } as any).select().single()
 
       if (insertError) throw insertError
 
@@ -96,7 +96,7 @@ export function Step8Review() {
       resetForm()
 
       // Redirect to success page or my listings
-      router.push(`/promoter/listings?success=true&id=${data.id}`)
+      router.push(`/promoter/listings?success=true&id=${(data as any).id}`)
     } catch (err) {
       console.error('Error submitting listing:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit listing')
@@ -131,20 +131,20 @@ export function Step8Review() {
                 <div>
                   <div className="text-gray-600">Total Price</div>
                   <div className="font-medium">
-                    ₹{formData.total_price.toLocaleString('en-IN')}
+                    ₹{(formData.total_price || 0).toLocaleString('en-IN')}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-600">Area</div>
                   <div className="font-medium">
-                    {formData.total_sqft.toLocaleString('en-IN')} sq.ft
+                    {(formData.total_sqft || 0).toLocaleString('en-IN')} sq.ft
                   </div>
                 </div>
                 <div className="col-span-2">
                   <div className="text-gray-600">Price per sq.ft</div>
                   <div className="text-lg font-semibold text-green-600">
                     ₹
-                    {Math.round(formData.total_price / formData.total_sqft).toLocaleString(
+                    {Math.round((formData.total_price || 0) / (formData.total_sqft || 1)).toLocaleString(
                       'en-IN'
                     )}
                     /sq.ft
@@ -287,7 +287,7 @@ export function Step8Review() {
               <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                 <li>Your listing will be submitted for admin review</li>
                 <li>Our team will verify the information within 24-48 hours</li>
-                <li>You'll receive a notification once approved or if changes are needed</li>
+                <li>You&apos;ll receive a notification once approved or if changes are needed</li>
                 <li>Once approved, your listing will be visible to buyers</li>
                 <li>You can track views and unlocks from your dashboard</li>
               </ol>

@@ -124,9 +124,9 @@ export function Step3Details() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData({ furnishing_status: 'FULLY_FURNISHED' })}
+                    onClick={() => setFormData({ furnishing_status: 'FURNISHED' })}
                     className={`p-4 border-2 rounded-lg text-center transition ${
-                      formData.furnishing_status === 'FULLY_FURNISHED'
+                      formData.furnishing_status === 'FURNISHED'
                         ? 'border-blue-600 bg-blue-50 text-blue-600'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}

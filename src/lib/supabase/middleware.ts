@@ -172,7 +172,7 @@ export async function checkRole(
     .eq('id', user.id)
     .single()
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  if (!profile || !allowedRoles.includes((profile as any).role)) {
     return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 

@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?   @unique
+  phone_e164 String?
+  full_name String?
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now()) @map("created_at")
+  listings  Listing[]
+  unlocks   Unlock[]
+  savedProperties SavedProperty[]
+  notifications Notification[]
+  appointmentsAsCustomer Appointment[] @relation("CustomerAppointments")
+  appointmentsAsPromoter Appointment[] @relation("PromoterAppointments")
+  paymentOrders PaymentOrder[]
+
+  @@map("users")
+}
+
+model Listing {
+  id                  String             @id @default(uuid())
+  status              ListingStatus      @default(DRAFT)
+  propertyType        PropertyType       @map("property_type")
+  totalPrice          Float              @map("total_price")
+  totalSqft           Float              @map("total_sqft")
+  priceType           PriceType          @map("price_type")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  promoterId          String             @map("promoter_id")
+  promoter            User               @relation(fields: [promoterId], references: [id])
+  amenitiesJson       Json?              @map("amenities_json")
+  amenitiesPrice      Float?             @map("amenities_price")
+  agreementAcceptance AgreementAcceptance?
+  unlocks             Unlock[]
+  savedBy             SavedProperty[]
+  appointments        Appointment[]
+  paymentOrders       PaymentOrder[]
+  title               String?
+  description         String?
+  city                String?
+  locality            String?
+  address             String?
+  state               String?
+  pinCode             String?            @map("pin_code")
+  latitude            Float?
+  longitude           Float?
+  bedrooms            Int?
+  bathrooms           Int?
+  floorNumber         Int?               @map("floor_number")
+  totalFloors         Int?               @map("total_floors")
+  furnishing          String?
+  possessionStatus    String?            @map("possession_status")
+  ageYears            Int?               @map("age_years")
+  facing              String?
+  parkingCount        Int?               @map("parking_count")
+  imageUrls           String[]           @map("image_urls")
+  viewCount           Int                @default(0) @map("view_count")
+  saveCount           Int                @default(0) @map("save_count")
+  unlockCount         Int                @default(0) @map("unlock_count")
+  pricePerSqft        Float              @default(0) @map("price_per_sqft")
+  reviewedAt          DateTime?          @map("reviewed_at")
+  reviewedBy          String?            @map("reviewed_by")
+  rejectionReason     String?            @map("rejection_reason")
+  deletedAt           DateTime?          @map("deleted_at")
+
+  @@map("listings")
+}
+
+model AgreementAcceptance {
+  id          String   @id @default(uuid())
+  acceptedAt  DateTime @map("accepted_at")
+  listingId   String   @unique @map("listing_id")
+  listing     Listing  @relation(fields: [listingId], references: [id])
+
+  @@map("listing_agreement_acceptances")
+}
+
+model Unlock {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now()) @map("created_at")
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id])
+  listingId       String   @map("listing_id")
+  listing         Listing  @relation(fields: [listingId], references: [id])
+  paymentProvider String?  @map("payment_provider")
+  paymentRef      String?  @map("payment_ref")
+  unlockedAt      DateTime @default(now()) @map("unlocked_at")
+
+  @@unique([userId, listingId])
+  @@map("unlocks")
+}
+
+model PaymentOrder {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  provider          PaymentProvider
+  status            PaymentStatus
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id])
+  listingId         String   @map("listing_id")
+  listing           Listing  @relation(fields: [listingId], references: [id])
+  amountPaise       Int      @map("amount_paise")
+  currency          String
+  providerOrderId   String   @unique @map("provider_order_id")
+  providerPaymentId String?  @map("provider_payment_id")
+  providerSignature String?  @map("provider_signature")
+  paidAt            DateTime? @map("paid_at")
+  errorCode         String?  @map("error_code")
+  errorDescription  String?  @map("error_description")
+
+  @@map("payment_orders")
+}
+
+model SavedProperty {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  listingId String   @map("listing_id")
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  savedPrice Float?  @map("saved_price")
+
+  @@map("saved_properties")
+}
+
+model Appointment {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  listingId         String   @map("listing_id")
+  listing           Listing  @relation(fields: [listingId], references: [id])
+  customerId        String   @map("customer_id")
+  customer          User     @relation("CustomerAppointments", fields: [customerId], references: [id])
+  promoterId        String   @map("promoter_id")
+  promoter          User     @relation("PromoterAppointments", fields: [promoterId], references: [id])
+  scheduledStart    DateTime @map("scheduled_start")
+  scheduledEnd      DateTime @map("scheduled_end")
+  status            AppointmentStatus @default(PENDING)
+  customerNotes     String?  @map("customer_notes")
+  promoterNotes     String?  @map("promoter_notes")
+  cancelledAt       DateTime? @map("cancelled_at")
+  cancelledBy       String?  @map("cancelled_by")
+  cancellationReason String? @map("cancellation_reason")
+
+  @@map("appointments")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  linkUrl   String?  @map("link_url")
+  metadata  Json?
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  userId     String?  @map("user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    Json?
+
+  @@map("activity_logs")
+}
+
+enum Role {
+  CUSTOMER
+  PROMOTER
+  ADMIN
+}
+
+enum ListingStatus {
+  LIVE
+  DRAFT
+  REJECTED
+  SOLD
+  PENDING_VERIFICATION
+  INACTIVE
+}
+
+enum PropertyType {
+  PLOT
+  APARTMENT
+  VILLA
+  HOUSE
+  LAND
+  COMMERCIAL
+}
+
+enum PriceType {
+  FIXED
+  NEGOTIABLE
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  DEV
+}
+
+enum PaymentStatus {
+  CREATED
+  INITIATED
+  PENDING
+  PAID
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  RESCHEDULED
+  COMPLETED
+  CANCELLED
+}

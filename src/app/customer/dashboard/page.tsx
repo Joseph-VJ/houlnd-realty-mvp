@@ -48,7 +48,7 @@ export default function CustomerDashboard() {
         // Fetch stats using RPC function
         const { data: statsData, error: statsError } = await supabase.rpc(
           'get_user_dashboard_stats',
-          { p_user_id: user.id }
+          { p_user_id: user.id } as any
         )
 
         if (statsError) throw statsError

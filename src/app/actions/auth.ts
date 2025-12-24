@@ -77,7 +77,7 @@ export async function signUp(
       phone_e164: phone || null,
       full_name: fullName,
       role,
-    })
+    } as any)
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
@@ -148,7 +148,7 @@ export async function signIn(
       success: true,
       data: {
         userId: authData.user.id,
-        role: profile.role,
+        role: (profile as any).role,
       },
     }
   } catch (error) {
