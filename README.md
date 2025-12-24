@@ -1,5 +1,44 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local development (MVP)
+
+### 1) Install
+
+```bash
+npm install
+```
+
+### 2) Configure env
+
+```bash
+cp .env.example .env
+```
+
+By default, the MVP uses **SQLite** for local development (so you can run without Docker). The DB file is `dev.db` in the project root.
+
+### Payments (Razorpay)
+
+For real unlock payments (instead of DEV unlock), set these in `.env`:
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `UNLOCK_FEE_INR` (defaults to 99)
+
+### 3) Start Postgres (Docker)
+
+```bash
+docker compose up -d
+```
+
+If you don't have Docker installed, you can either:
+- Install Docker Desktop, then run the command above, or
+- Point `DATABASE_URL` to any existing Postgres instance you already have.
+
+### 4) Run the app
+
+```bash
+npm run dev
+```
+
 ## Getting Started
 
 First, run the development server:

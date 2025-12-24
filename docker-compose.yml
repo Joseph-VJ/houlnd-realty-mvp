@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: houlnd_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: houlnd
+      POSTGRES_PASSWORD: houlnd
+      POSTGRES_DB: houlnd
+    ports:
+      - "5432:5432"
+    volumes:
+      - houlnd_pgdata:/var/lib/postgresql/data
+
+volumes:
+  houlnd_pgdata:
