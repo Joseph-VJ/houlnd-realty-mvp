@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2">
                   <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-                  <div className="text-sm text-gray-500">Realty</div>
+                  <div className="text-sm text-gray-900">Realty</div>
                 </Link>
                 <Badge variant="danger" className="ml-4">
                   Admin
@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-            <p className="text-gray-600 mt-2">View and manage all users on the platform</p>
+            <p className="text-gray-900 mt-2">View and manage all users on the platform</p>
           </div>
 
           {/* Filters */}
@@ -175,12 +175,12 @@ export default function AdminUsersPage() {
               </div>
 
               {/* Stats */}
-              <div className="mt-4 flex gap-4 text-sm text-gray-600">
+              <div className="mt-4 flex gap-4 text-sm text-gray-900">
                 <div>
-                  Total: <span className="font-medium">{users.length}</span>
+                  Total: <span className="font-medium text-gray-900">{users.length}</span>
                 </div>
                 <div>
-                  Showing: <span className="font-medium">{filteredUsers.length}</span>
+                  Showing: <span className="font-medium text-gray-900">{filteredUsers.length}</span>
                 </div>
               </div>
             </CardContent>
@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
                 <div className="text-center py-16">
                   <div className="text-4xl mb-4">👥</div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No users found</h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-900">
                     {searchQuery || roleFilter !== 'ALL'
                       ? 'Try adjusting your filters.'
                       : 'No users registered yet.'}
@@ -211,22 +211,22 @@ export default function AdminUsersPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         User
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         Email
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         Phone
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         Joined
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -238,18 +238,18 @@ export default function AdminUsersPage() {
                           <div className="font-medium text-gray-900">
                             {u.full_name || 'N/A'}
                           </div>
-                          <div className="text-xs text-gray-500">{u.id.slice(0, 8)}...</div>
+                          <div className="text-xs text-gray-900">{u.id.slice(0, 8)}...</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {u.email || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {u.phone_e164 || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Badge variant={getRoleBadgeVariant(u.role)}>{u.role}</Badge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(u.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -279,7 +279,7 @@ export default function AdminUsersPage() {
                 <h3 className="text-lg font-semibold text-gray-900">User Details</h3>
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-900 hover:text-gray-900"
                 >
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -294,30 +294,30 @@ export default function AdminUsersPage() {
 
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Full Name</div>
-                  <div className="font-medium">{selectedUser.full_name || 'N/A'}</div>
+                  <div className="text-sm text-gray-900 mb-1">Full Name</div>
+                  <div className="font-medium text-gray-900">{selectedUser.full_name || 'N/A'}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Email</div>
-                  <div className="font-medium">{selectedUser.email || 'N/A'}</div>
+                  <div className="text-sm text-gray-900 mb-1">Email</div>
+                  <div className="font-medium text-gray-900">{selectedUser.email || 'N/A'}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Phone</div>
-                  <div className="font-medium">{selectedUser.phone_e164 || 'N/A'}</div>
+                  <div className="text-sm text-gray-900 mb-1">Phone</div>
+                  <div className="font-medium text-gray-900">{selectedUser.phone_e164 || 'N/A'}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Role</div>
+                  <div className="text-sm text-gray-900 mb-1">Role</div>
                   <Badge variant={getRoleBadgeVariant(selectedUser.role)}>
                     {selectedUser.role}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">User ID</div>
-                  <div className="font-mono text-sm">{selectedUser.id}</div>
+                  <div className="text-sm text-gray-900 mb-1">User ID</div>
+                  <div className="font-mono text-sm text-gray-900">{selectedUser.id}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Joined</div>
-                  <div className="font-medium">
+                  <div className="text-sm text-gray-900 mb-1">Joined</div>
+                  <div className="font-medium text-gray-900">
                     {new Date(selectedUser.created_at).toLocaleString()}
                   </div>
                 </div>

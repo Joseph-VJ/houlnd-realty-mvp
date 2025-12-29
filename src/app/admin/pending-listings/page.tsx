@@ -62,22 +62,34 @@ export default function AdminPendingListingsPage() {
     try {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('listings')
-        .select(`
-          *,
-          promoter:users!promoter_id (
-            full_name,
-            email,
-            phone_e164
-          )
-        `)
-        .eq('status', 'PENDING_VERIFICATION')
-        .order('created_at', { ascending: false })
+      // Check if offline mode
+      const isOfflineMode = process.env.NEXT_PUBLIC_USE_OFFLINE === 'true'
 
-      if (error) throw error
+      if (isOfflineMode) {
+        // OFFLINE MODE: Fetch from API route that uses Prisma
+        const response = await fetch('/api/admin/pending-listings')
+        if (!response.ok) throw new Error('Failed to fetch pending listings')
+        const data = await response.json()
+        setListings(data.listings || [])
+      } else {
+        // ONLINE MODE: Use Supabase
+        const { data, error } = await supabase
+          .from('listings')
+          .select(`
+            *,
+            promoter:users!promoter_id (
+              full_name,
+              email,
+              phone_e164
+            )
+          `)
+          .eq('status', 'PENDING_VERIFICATION')
+          .order('created_at', { ascending: false })
 
-      setListings(data || [])
+        if (error) throw error
+
+        setListings(data || [])
+      }
     } catch (error) {
       console.error('Error fetching pending listings:', error)
     } finally {
@@ -89,13 +101,28 @@ export default function AdminPendingListingsPage() {
     try {
       setProcessingId(listingId)
 
-      // Call approve RPC function
-      const { error } = await supabase.rpc('approve_listing', {
-        p_listing_id: listingId,
-        p_admin_id: user!.id,
-      } as any)
+      // Check if offline mode
+      const isOfflineMode = process.env.NEXT_PUBLIC_USE_OFFLINE === 'true'
 
-      if (error) throw error
+      if (isOfflineMode) {
+        // OFFLINE MODE: Use API route
+        const response = await fetch(`/api/admin/listings/${listingId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) throw new Error('Failed to approve listing')
+      } else {
+        // ONLINE MODE: Call approve RPC function
+        const { error } = await supabase.rpc('approve_listing', {
+          p_listing_id: listingId,
+          p_admin_id: user!.id,
+        } as any)
+
+        if (error) throw error
+      }
 
       // Remove from list
       setListings((prev) => prev.filter((l) => l.id !== listingId))
@@ -121,14 +148,32 @@ export default function AdminPendingListingsPage() {
     try {
       setProcessingId(rejectListingId)
 
-      // Call reject RPC function
-      const { error } = await supabase.rpc('reject_listing', {
-        p_listing_id: rejectListingId,
-        p_admin_id: user!.id,
-        p_rejection_reason: rejectionReason.trim(),
-      } as any)
+      // Check if offline mode
+      const isOfflineMode = process.env.NEXT_PUBLIC_USE_OFFLINE === 'true'
 
-      if (error) throw error
+      if (isOfflineMode) {
+        // OFFLINE MODE: Use API route
+        const response = await fetch(`/api/admin/listings/${rejectListingId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            rejection_reason: rejectionReason.trim()
+          })
+        })
+
+        if (!response.ok) throw new Error('Failed to reject listing')
+      } else {
+        // ONLINE MODE: Call reject RPC function
+        const { error } = await supabase.rpc('reject_listing', {
+          p_listing_id: rejectListingId,
+          p_admin_id: user!.id,
+          p_rejection_reason: rejectionReason.trim(),
+        } as any)
+
+        if (error) throw error
+      }
 
       // Remove from list
       setListings((prev) => prev.filter((l) => l.id !== rejectListingId))
@@ -155,7 +200,7 @@ export default function AdminPendingListingsPage() {
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2">
                   <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-                  <div className="text-sm text-gray-500">Realty</div>
+                  <div className="text-sm text-gray-900">Realty</div>
                 </Link>
                 <Badge variant="danger" className="ml-4">Admin</Badge>
               </div>
@@ -174,7 +219,7 @@ export default function AdminPendingListingsPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Pending Listings</h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-900 mt-2">
               Review and approve property listings waiting for verification
             </p>
           </div>
@@ -191,7 +236,7 @@ export default function AdminPendingListingsPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     All caught up!
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-900">
                     There are no pending listings to review at the moment.
                   </p>
                 </div>
@@ -215,7 +260,7 @@ export default function AdminPendingListingsPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <div className="w-full h-full flex items-center justify-center text-gray-900">
                               <div className="text-center">
                                 <div className="text-4xl mb-2">🏠</div>
                                 <div className="text-sm">No image</div>
@@ -224,7 +269,7 @@ export default function AdminPendingListingsPage() {
                           )}
                         </div>
                         {listing.image_urls && listing.image_urls.length > 1 && (
-                          <div className="text-xs text-gray-500 mt-2 text-center">
+                          <div className="text-xs text-gray-900 mt-2 text-center">
                             +{listing.image_urls.length - 1} more images
                           </div>
                         )}
@@ -239,7 +284,7 @@ export default function AdminPendingListingsPage() {
                               {listing.property_type} in {listing.city}
                             </h3>
                             {listing.locality && (
-                              <p className="text-sm text-gray-600 mt-1">{listing.locality}</p>
+                              <p className="text-sm text-gray-900 mt-1">{listing.locality}</p>
                             )}
                           </div>
                           <Badge variant="warning">Pending</Badge>
@@ -248,32 +293,32 @@ export default function AdminPendingListingsPage() {
                         {/* Price Info */}
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
-                            <div className="text-sm text-gray-600">Total Price</div>
-                            <div className="text-lg font-semibold">
+                            <div className="text-sm text-gray-900">Total Price</div>
+                            <div className="text-lg font-semibold text-gray-900">
                               ₹{listing.total_price.toLocaleString('en-IN')}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Price/sq.ft</div>
-                            <div className="text-lg font-semibold text-blue-600">
+                            <div className="text-sm text-gray-900">Price/sq.ft</div>
+                            <div className="text-lg font-semibold text-gray-900">
                               ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Area</div>
-                            <div className="text-base font-medium">
+                            <div className="text-sm text-gray-900">Area</div>
+                            <div className="text-base font-medium text-gray-900">
                               {listing.total_sqft.toLocaleString('en-IN')} sq.ft
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-gray-600">Price Type</div>
-                            <div className="text-base font-medium">{listing.price_type}</div>
+                            <div className="text-sm text-gray-900">Price Type</div>
+                            <div className="text-base font-medium text-gray-900">{listing.price_type}</div>
                           </div>
                         </div>
 
                         {/* Additional Details */}
                         {(listing.bedrooms || listing.bathrooms) && (
-                          <div className="flex gap-4 mb-4 text-sm text-gray-600">
+                          <div className="flex gap-4 mb-4 text-sm text-gray-900">
                             {listing.bedrooms && <div>🛏️ {listing.bedrooms} BHK</div>}
                             {listing.bathrooms && <div>🚿 {listing.bathrooms} Bath</div>}
                           </div>
@@ -282,8 +327,8 @@ export default function AdminPendingListingsPage() {
                         {/* Description */}
                         {listing.description && (
                           <div className="mb-4">
-                            <div className="text-sm text-gray-600 mb-1">Description</div>
-                            <p className="text-sm text-gray-700 line-clamp-2">
+                            <div className="text-sm text-gray-900 mb-1">Description</div>
+                            <p className="text-sm text-gray-900 line-clamp-2">
                               {listing.description}
                             </p>
                           </div>
@@ -291,8 +336,8 @@ export default function AdminPendingListingsPage() {
 
                         {/* Promoter Info */}
                         <div className="border-t pt-4 mb-4">
-                          <div className="text-sm text-gray-600 mb-2">Promoter Details</div>
-                          <div className="space-y-1 text-sm">
+                          <div className="text-sm text-gray-900 mb-2">Promoter Details</div>
+                          <div className="space-y-1 text-sm text-gray-900">
                             <div>
                               <span className="font-medium">Name:</span> {promoter?.full_name || 'N/A'}
                             </div>
@@ -306,7 +351,7 @@ export default function AdminPendingListingsPage() {
                         </div>
 
                         {/* Submission Date */}
-                        <div className="text-xs text-gray-500 mb-4">
+                        <div className="text-xs text-gray-900 mb-4">
                           Submitted on {new Date(listing.created_at).toLocaleString()}
                         </div>
 
@@ -352,7 +397,7 @@ export default function AdminPendingListingsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Reject Listing
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-900 mb-4">
                 Please provide a reason for rejecting this listing. This will be sent to the promoter.
               </p>
               <textarea

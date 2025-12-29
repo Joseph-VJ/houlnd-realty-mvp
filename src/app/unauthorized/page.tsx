@@ -47,11 +47,11 @@ export default function UnauthorizedPage() {
               </h1>
 
               {/* Message */}
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-900 mb-6">
                 You don't have permission to access this page.
                 {profile && (
                   <span className="block mt-2 text-sm">
-                    Your account type: <span className="font-medium">{profile.role}</span>
+                    Your account type: <span className="font-medium text-gray-900">{profile.role}</span>
                   </span>
                 )}
               </p>
@@ -80,7 +80,7 @@ export default function UnauthorizedPage() {
               </div>
 
               {/* Help Text */}
-              <p className="text-xs text-gray-500 mt-6">
+              <p className="text-xs text-gray-900 mt-6">
                 If you believe this is an error, please contact support.
               </p>
             </div>

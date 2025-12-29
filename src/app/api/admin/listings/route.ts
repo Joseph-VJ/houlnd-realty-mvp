@@ -1,23 +1,9 @@
 import { prisma } from "@/lib/db";
-
-async function requireAdmin(req: Request) {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) {
-    return { error: Response.json({ error: "Missing x-user-id" }, { status: 401 }) };
-  }
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  });
-  if (!user || user.role !== "ADMIN") {
-    return { error: Response.json({ error: "Admin only" }, { status: 403 }) };
-  }
-  return { user };
-}
+import { requireRole, unauthorizedResponse, forbiddenResponse } from "@/lib/apiAuth";
 
 export async function GET(req: Request) {
-  const auth = await requireAdmin(req);
-  if ("error" in auth) return auth.error;
+  try {
+    const user = await requireRole(req, "ADMIN");
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status") as
@@ -40,8 +26,20 @@ export async function GET(req: Request) {
       promoter: {
         select: { id: true, phoneE164: true },
       },
-    },
-  });
+      },
+    });
 
-  return Response.json({ listings });
+    return Response.json({ listings });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('Unauthorized')) {
+        return unauthorizedResponse(error.message);
+      }
+      if (error.message.includes('Forbidden')) {
+        return forbiddenResponse(error.message);
+      }
+    }
+    console.error('Error fetching admin listings:', error);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

@@ -100,6 +100,16 @@ function RegisterForm() {
         return
       }
 
+      // In offline mode, skip OTP and redirect directly to dashboard
+      if (process.env.NEXT_PUBLIC_USE_OFFLINE === 'true') {
+        // Redirect to role-based dashboard
+        const dashboardUrl =
+          data.role === 'CUSTOMER' ? '/customer/dashboard' : '/promoter/dashboard'
+        router.push(dashboardUrl)
+        return
+      }
+
+      // In online mode with Supabase, continue to OTP step
       // Send OTP to phone (optional - only if phone auth is configured)
       // Commenting out OTP flow for now since it requires SMS provider setup
       /*
@@ -164,10 +174,10 @@ function RegisterForm() {
         <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-4">
           {/* Role Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               I want to
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <label className="relative">
                 <input
                   type="radio"
@@ -175,9 +185,9 @@ function RegisterForm() {
                   {...step1Form.register('role')}
                   className="peer sr-only"
                 />
-                <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-blue-200 peer-checked:border-blue-600 peer-checked:bg-blue-50">
-                  <div className="text-2xl mb-1">🏠</div>
-                  <div className="text-sm font-medium">Buy</div>
+                <div className="cursor-pointer rounded-xl border-2 border-gray-300 p-6 text-center transition-all hover:border-blue-400 hover:shadow-md peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:shadow-lg">
+                  <div className="text-3xl mb-2">🏠</div>
+                  <div className="text-base font-semibold text-gray-900">Buy</div>
                 </div>
               </label>
               <label className="relative">
@@ -187,9 +197,9 @@ function RegisterForm() {
                   {...step1Form.register('role')}
                   className="peer sr-only"
                 />
-                <div className="cursor-pointer rounded-lg border-2 border-gray-200 p-4 text-center hover:border-green-200 peer-checked:border-green-600 peer-checked:bg-green-50">
-                  <div className="text-2xl mb-1">💼</div>
-                  <div className="text-sm font-medium">Sell</div>
+                <div className="cursor-pointer rounded-xl border-2 border-gray-300 p-6 text-center transition-all hover:border-blue-400 hover:shadow-md peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:shadow-lg">
+                  <div className="text-3xl mb-2">💼</div>
+                  <div className="text-base font-semibold text-gray-900">Sell</div>
                 </div>
               </label>
             </div>
@@ -197,14 +207,14 @@ function RegisterForm() {
 
           {/* Full Name */}
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="fullName" className="block text-sm font-semibold text-gray-900 mb-2">
               Full Name
             </label>
             <input
               id="fullName"
               type="text"
               {...step1Form.register('fullName')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
               placeholder="John Doe"
             />
             {step1Form.formState.errors.fullName && (
@@ -216,14 +226,14 @@ function RegisterForm() {
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
               Email
             </label>
             <input
               id="email"
               type="email"
               {...step1Form.register('email')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
               placeholder="john@example.com"
             />
             {step1Form.formState.errors.email && (
@@ -235,14 +245,14 @@ function RegisterForm() {
 
           {/* Phone */}
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="phone" className="block text-sm font-semibold text-gray-900 mb-2">
               Phone Number
             </label>
             <input
               id="phone"
               type="tel"
               {...step1Form.register('phone')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
               placeholder="+919876543210"
             />
             {step1Form.formState.errors.phone && (
@@ -254,14 +264,14 @@ function RegisterForm() {
 
           {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
               Password
             </label>
             <input
               id="password"
               type="password"
               {...step1Form.register('password')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
               placeholder="Min 6 characters"
             />
             {step1Form.formState.errors.password && (
@@ -275,7 +285,7 @@ function RegisterForm() {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-semibold text-gray-900 mb-2"
             >
               Confirm Password
             </label>
@@ -283,7 +293,7 @@ function RegisterForm() {
               id="confirmPassword"
               type="password"
               {...step1Form.register('confirmPassword')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
               placeholder="Re-enter password"
             />
             {step1Form.formState.errors.confirmPassword && (
@@ -301,7 +311,7 @@ function RegisterForm() {
               {...step1Form.register('agreeToTerms')}
               className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor="agreeToTerms" className="ml-2 text-sm text-gray-600">
+            <label htmlFor="agreeToTerms" className="ml-2 text-sm text-gray-900">
               I agree to the{' '}
               <Link href="/legal/terms" className="text-blue-600 hover:underline">
                 Terms of Service
@@ -322,7 +332,7 @@ function RegisterForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-md hover:shadow-lg"
           >
             {loading ? 'Creating Account...' : 'Continue'}
           </button>
@@ -333,7 +343,7 @@ function RegisterForm() {
       {step === 2 && (
         <form onSubmit={step2Form.handleSubmit(onStep2Submit)} className="space-y-4">
           <div className="text-center mb-6">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-900">
               We've sent a 6-digit code to
               <br />
               <span className="font-medium text-gray-900">{step1Data?.phone}</span>
@@ -342,7 +352,7 @@ function RegisterForm() {
 
           {/* OTP Input */}
           <div>
-            <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="otp" className="block text-sm font-medium text-gray-900 mb-1">
               Enter OTP
             </label>
             <input
@@ -388,7 +398,7 @@ function RegisterForm() {
           <button
             type="button"
             onClick={() => setStep(1)}
-            className="w-full text-gray-600 py-2 rounded-lg font-medium hover:bg-gray-100"
+            className="w-full text-gray-900 py-2 rounded-lg font-medium hover:bg-gray-100"
           >
             Back
           </button>
@@ -402,18 +412,18 @@ export default function RegisterPage() {
   const [step, setStep] = useState<1 | 2>(1)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="text-3xl font-bold text-blue-600">Houlnd</div>
-              <div className="text-sm text-gray-500">Realty</div>
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="text-4xl font-bold text-blue-600">Houlnd</div>
+              <div className="text-base text-gray-900 font-medium">Realty</div>
             </div>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create Your Account</h1>
-          <p className="text-sm text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900">Create Your Account</h1>
+          <p className="text-base text-gray-900 mt-3">
             {step === 1 ? 'Fill in your details to get started' : 'Verify your phone number'}
           </p>
         </div>
@@ -423,7 +433,7 @@ export default function RegisterPage() {
           <div className="flex items-center justify-center gap-4">
             <div
               className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
               }`}
             >
               1
@@ -436,7 +446,7 @@ export default function RegisterPage() {
             </div>
             <div
               className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
               }`}
             >
               2
@@ -450,7 +460,7 @@ export default function RegisterPage() {
         </Suspense>
 
         {/* Login Link */}
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <div className="mt-6 text-center text-sm text-gray-900">
           Already have an account?{' '}
           <Link href="/login" className="text-blue-600 hover:underline font-medium">
             Login

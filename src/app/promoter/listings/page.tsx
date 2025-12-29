@@ -17,7 +17,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge, getListingStatusBadge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { getPromoterListings } from '@/app/actions/admin'
 
 type ListingStatus = 'ALL' | 'PENDING_VERIFICATION' | 'LIVE' | 'REJECTED'
 
@@ -42,7 +42,6 @@ export default function MyListingsPage() {
   const [activeTab, setActiveTab] = useState<ListingStatus>('ALL')
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
@@ -51,31 +50,25 @@ export default function MyListingsPage() {
       try {
         setLoading(true)
 
-        let query = supabase
-          .from('listings')
-          .select('*')
-          .eq('promoter_id', user.id)
-          .order('created_at', { ascending: false })
+        // Use server action that supports offline mode
+        const result = await getPromoterListings(activeTab)
 
-        // Filter by status if not "ALL"
-        if (activeTab !== 'ALL') {
-          query = query.eq('status', activeTab)
+        if (result.success && result.data) {
+          setListings(result.data)
+        } else {
+          console.error('Error fetching listings:', result.error)
+          setListings([])
         }
-
-        const { data, error } = await query
-
-        if (error) throw error
-
-        setListings(data || [])
       } catch (error) {
         console.error('Error fetching listings:', error)
+        setListings([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchListings()
-  }, [user, activeTab, supabase])
+  }, [user, activeTab])
 
   const tabs = [
     { key: 'ALL' as ListingStatus, label: 'All' },
@@ -88,17 +81,17 @@ export default function MyListingsPage() {
     <ProtectedRoute requiredRole="PROMOTER">
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <header className="bg-white border-b">
+        <header className="bg-white border-b shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2">
                   <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-                  <div className="text-sm text-gray-500">Realty</div>
+                  <div className="text-sm text-gray-900 font-medium">Realty</div>
                 </Link>
               </div>
               <div className="flex items-center gap-4">
-                <Link href="/promoter/dashboard" className="text-gray-700 hover:text-gray-900">
+                <Link href="/promoter/dashboard" className="text-gray-900 hover:text-gray-900">
                   Dashboard
                 </Link>
                 <Link href="/promoter/post-new-property">
@@ -113,7 +106,7 @@ export default function MyListingsPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">My Listings</h1>
-            <p className="text-gray-600 mt-2">Manage all your property listings</p>
+            <p className="text-gray-900 mt-2">Manage all your property listings</p>
           </div>
 
           {/* Tabs */}
@@ -128,7 +121,7 @@ export default function MyListingsPage() {
                     ${
                       activeTab === tab.key
                         ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        : 'border-transparent text-gray-900 hover:text-gray-900 hover:border-gray-300'
                     }
                   `}
                 >
@@ -147,7 +140,7 @@ export default function MyListingsPage() {
             <div className="text-center py-16">
               <div className="text-4xl mb-4">📦</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-900 mb-6">
                 {activeTab === 'ALL'
                   ? "You haven't posted any properties yet."
                   : `You don't have any ${activeTab.toLowerCase().replace('_', ' ')} listings.`}
@@ -169,7 +162,7 @@ export default function MyListingsPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="w-full h-full flex items-center justify-center text-gray-900">
                         <div className="text-center">
                           <div className="text-4xl mb-2">🏠</div>
                           <div className="text-sm">No image</div>
@@ -193,29 +186,29 @@ export default function MyListingsPage() {
                     {/* Details */}
                     <div className="space-y-1 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Total Price:</span>
-                        <span className="font-medium">₹{listing.total_price.toLocaleString('en-IN')}</span>
+                        <span className="text-gray-900">Total Price:</span>
+                        <span className="font-medium text-gray-900">₹{listing.total_price.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Sq.ft:</span>
-                        <span className="font-medium">{listing.total_sqft.toLocaleString('en-IN')}</span>
+                        <span className="text-gray-900">Sq.ft:</span>
+                        <span className="font-medium text-gray-900">{listing.total_sqft.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Price/sq.ft:</span>
-                        <span className="font-medium text-blue-600">
+                        <span className="text-gray-900">Price/sq.ft:</span>
+                        <span className="font-medium text-gray-900">
                           ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}
                         </span>
                       </div>
                       {listing.bedrooms && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Bedrooms:</span>
-                          <span className="font-medium">{listing.bedrooms} BHK</span>
+                          <span className="text-gray-900">Bedrooms:</span>
+                          <span className="font-medium text-gray-900">{listing.bedrooms} BHK</span>
                         </div>
                       )}
                     </div>
 
                     {/* Stats */}
-                    <div className="flex gap-4 mb-4 text-sm text-gray-600">
+                    <div className="flex gap-4 mb-4 text-sm text-gray-900">
                       <div>👁️ {listing.view_count || 0} views</div>
                       <div>🔓 {listing.unlock_count || 0} unlocks</div>
                     </div>

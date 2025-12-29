@@ -17,10 +17,8 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { searchListings, getPopularCities } from '@/app/actions/listings'
+import { saveListing, unsaveListing, getSavedListingIds } from '@/app/actions/savedProperties'
 
 interface Listing {
   id: string
@@ -42,7 +40,6 @@ function SearchContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
-  const supabase = createClient()
 
   // Filter states
   const [minPpsf, setMinPpsf] = useState(searchParams.get('minPpsf') || '')
@@ -73,9 +70,10 @@ function SearchContent() {
 
   const fetchCities = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_popular_cities')
-      if (error) throw error
-      setCities((data as any)?.map((c: any) => c.city) || [])
+      const result = await getPopularCities()
+      if (result.success && result.data) {
+        setCities(result.data)
+      }
     } catch (error) {
       console.error('Error fetching cities:', error)
     }
@@ -85,16 +83,14 @@ function SearchContent() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('saved_properties')
-        .select('listing_id')
-        .eq('user_id', user.id)
+      const result = await getSavedListingIds()
 
-      if (error) throw error
-
-      setSavedPropertyIds(new Set(data?.map((sp: { listing_id: string }) => sp.listing_id) || []))
+      if (result.success && result.data) {
+        setSavedPropertyIds(new Set(result.data))
+      }
     } catch (error) {
       console.error('Error fetching saved properties:', error)
+      // Continue without saved properties if there's an error
     }
   }
 
@@ -102,60 +98,26 @@ function SearchContent() {
     try {
       setLoading(true)
 
-      let query = supabase
-        .from('listings')
-        .select('*')
-        .eq('status', 'LIVE')
+      const result = await searchListings({
+        minPpsf,
+        maxPpsf,
+        city,
+        propertyType,
+        bedrooms,
+        minPrice,
+        maxPrice,
+        sortBy
+      })
 
-      // Apply filters
-      if (minPpsf) {
-        query = query.gte('price_per_sqft', parseFloat(minPpsf))
+      if (result.success && result.data) {
+        setListings(result.data)
+      } else {
+        console.error('Error fetching listings:', result.error)
+        setListings([])
       }
-      if (maxPpsf) {
-        query = query.lte('price_per_sqft', parseFloat(maxPpsf))
-      }
-      if (city) {
-        query = query.eq('city', city)
-      }
-      if (propertyType) {
-        query = query.eq('property_type', propertyType)
-      }
-      if (bedrooms) {
-        query = query.eq('bedrooms', parseInt(bedrooms))
-      }
-      if (minPrice) {
-        query = query.gte('total_price', parseFloat(minPrice))
-      }
-      if (maxPrice) {
-        query = query.lte('total_price', parseFloat(maxPrice))
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'newest':
-          query = query.order('created_at', { ascending: false })
-          break
-        case 'price_asc':
-          query = query.order('total_price', { ascending: true })
-          break
-        case 'price_desc':
-          query = query.order('total_price', { ascending: false })
-          break
-        case 'ppsf_asc':
-          query = query.order('price_per_sqft', { ascending: true })
-          break
-        case 'ppsf_desc':
-          query = query.order('price_per_sqft', { ascending: false })
-          break
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      setListings(data || [])
     } catch (error) {
       console.error('Error fetching listings:', error)
+      setListings([])
     } finally {
       setLoading(false)
     }
@@ -171,29 +133,27 @@ function SearchContent() {
       const isSaved = savedPropertyIds.has(listingId)
 
       if (isSaved) {
-        // Unsave
-        const { error } = await supabase
-          .from('saved_properties')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('listing_id', listingId)
+        // Unsave using server action
+        const result = await unsaveListing(listingId)
 
-        if (error) throw error
-
-        setSavedPropertyIds((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(listingId)
-          return newSet
-        })
+        if (result.success) {
+          setSavedPropertyIds((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete(listingId)
+            return newSet
+          })
+        } else {
+          console.error('Error unsaving:', result.error)
+        }
       } else {
-        // Save
-        const { error } = await supabase
-          .from('saved_properties')
-          .insert({ user_id: user.id, listing_id: listingId } as any)
+        // Save using server action
+        const result = await saveListing(listingId)
 
-        if (error) throw error
-
-        setSavedPropertyIds((prev) => new Set(prev).add(listingId))
+        if (result.success) {
+          setSavedPropertyIds((prev) => new Set(prev).add(listingId))
+        } else {
+          console.error('Error saving:', result.error)
+        }
       }
     } catch (error) {
       console.error('Error toggling save:', error)
@@ -216,9 +176,9 @@ function SearchContent() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Search Properties</h1>
-        <p className="text-gray-600 mt-2">
+      <div className="mb-8">
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-3">Search Properties</h1>
+        <p className="text-lg text-gray-900">
           Find your perfect property with transparent price per square foot
         </p>
       </div>
@@ -226,94 +186,93 @@ function SearchContent() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filters Sidebar */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">Filters</h3>
-                {hasFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Clear All
-                  </button>
-                )}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-20">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-gray-900">Filters</h3>
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-5">
+              {/* PRIMARY USP: Sq.ft Price */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  💰 Price per Sq.ft
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="number"
+                    value={minPpsf}
+                    onChange={(e) => setMinPpsf(e.target.value)}
+                    placeholder="Min ₹/sq.ft"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-900"
+                  />
+                  <input
+                    type="number"
+                    value={maxPpsf}
+                    onChange={(e) => setMaxPpsf(e.target.value)}
+                    placeholder="Max ₹/sq.ft"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-900"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-4">
-                {/* PRIMARY USP: Sq.ft Price */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    💰 Price per Sq.ft (PRIMARY FILTER)
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="number"
-                      value={minPpsf}
-                      onChange={(e) => setMinPpsf(e.target.value)}
-                      placeholder="Min ₹/sq.ft"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="number"
-                      value={maxPpsf}
-                      onChange={(e) => setMaxPpsf(e.target.value)}
-                      placeholder="Max ₹/sq.ft"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+              {/* City */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  City
+                </label>
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+                >
+                  <option value="">All Cities</option>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {/* City */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City
-                  </label>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Cities</option>
-                    {cities.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Property Type */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Property Type
+                </label>
+                <select
+                  value={propertyType}
+                  onChange={(e) => setPropertyType(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+                >
+                  <option value="">All Types</option>
+                  <option value="PLOT">Plot</option>
+                  <option value="APARTMENT">Apartment</option>
+                  <option value="VILLA">Villa</option>
+                  <option value="HOUSE">House</option>
+                  <option value="LAND">Land</option>
+                  <option value="COMMERCIAL">Commercial</option>
+                </select>
+              </div>
 
-                {/* Property Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Property Type
-                  </label>
-                  <select
-                    value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Types</option>
-                    <option value="PLOT">Plot</option>
-                    <option value="APARTMENT">Apartment</option>
-                    <option value="VILLA">Villa</option>
-                    <option value="HOUSE">House</option>
-                    <option value="LAND">Land</option>
-                    <option value="COMMERCIAL">Commercial</option>
-                  </select>
-                </div>
-
-                {/* Bedrooms */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bedrooms
-                  </label>
-                  <select
-                    value={bedrooms}
-                    onChange={(e) => setBedrooms(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Any</option>
+              {/* Bedrooms */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Bedrooms
+                </label>
+                <select
+                  value={bedrooms}
+                  onChange={(e) => setBedrooms(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
+                >
+                  <option value="">Any</option>
                     <option value="1">1 BHK</option>
                     <option value="2">2 BHK</option>
                     <option value="3">3 BHK</option>
@@ -324,7 +283,7 @@ function SearchContent() {
 
                 {/* Total Price Range */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Total Price
                   </label>
                   <div className="space-y-2">
@@ -333,27 +292,26 @@ function SearchContent() {
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
                       placeholder="Min Price"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
                     />
                     <input
                       type="number"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                       placeholder="Max Price"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 placeholder:text-gray-900"
                     />
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
         {/* Results */}
         <div className="lg:col-span-3">
           {/* Sort and Count */}
           <div className="flex justify-between items-center mb-6">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-900">
               {loading ? 'Loading...' : `${listings.length} properties found`}
             </div>
             <select
@@ -375,46 +333,46 @@ function SearchContent() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : listings.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-16">
-                  <div className="text-4xl mb-4">🔍</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No properties found
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Try adjusting your filters to see more results.
-                  </p>
-                  {hasFilters && (
-                    <Button onClick={clearFilters}>Clear All Filters</Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="text-center py-16">
+                <div className="text-4xl mb-4">🔍</div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  No properties found
+                </h3>
+                <p className="text-gray-900 mb-6">
+                  Try adjusting your filters to see more results.
+                </p>
+                {hasFilters && (
+                  <button onClick={clearFilters} className="px-6 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/30 hover:scale-105">
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {listings.map((listing) => (
-                <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <div key={listing.id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden group">
                   {/* Image */}
-                  <div className="relative h-48 bg-gray-200">
+                  <div className="relative h-52 bg-gray-200">
                     {listing.image_urls && listing.image_urls.length > 0 ? (
                       <img
                         src={listing.image_urls[0]}
                         alt={`${listing.property_type} in ${listing.city}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="w-full h-full flex items-center justify-center text-gray-900">
                         <div className="text-center">
-                          <div className="text-4xl mb-2">🏠</div>
-                          <div className="text-sm">No image</div>
+                          <div className="text-5xl mb-2">🏠</div>
+                          <div className="text-sm font-medium">No image</div>
                         </div>
                       </div>
                     )}
                     {/* Save Button */}
                     <button
                       onClick={() => handleSaveToggle(listing.id)}
-                      className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      className="absolute top-3 right-3 p-2.5 bg-white rounded-full shadow-lg hover:scale-110 transition-all"
                       title={savedPropertyIds.has(listing.id) ? 'Remove from saved' : 'Save property'}
                     >
                       <span className="text-xl">
@@ -423,50 +381,52 @@ function SearchContent() {
                     </button>
                   </div>
 
-                  <CardContent className="pt-4">
+                  <div className="p-5">
                     {/* Title */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
                       {listing.property_type} in {listing.city}
                     </h3>
                     {listing.locality && (
-                      <p className="text-sm text-gray-600 mb-3">{listing.locality}</p>
+                      <p className="text-sm text-gray-900 mb-3 font-medium">{listing.locality}</p>
                     )}
 
                     {/* Price Badge */}
-                    <div className="mb-3">
-                      <Badge variant="info" className="text-base px-3 py-1">
+                    <div className="mb-4">
+                      <span className="inline-block bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm font-bold">
                         ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}/sq.ft
-                      </Badge>
+                      </span>
                     </div>
 
                     {/* Details */}
-                    <div className="space-y-1 mb-4">
+                    <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Total Price:</span>
-                        <span className="font-medium">
+                        <span className="text-gray-900 font-medium">Total Price:</span>
+                        <span className="font-bold text-gray-900">
                           ₹{listing.total_price.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Area:</span>
-                        <span className="font-medium">
+                        <span className="text-gray-900 font-medium">Area:</span>
+                        <span className="font-bold text-gray-900">
                           {listing.total_sqft.toLocaleString('en-IN')} sq.ft
                         </span>
                       </div>
                       {listing.bedrooms && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Bedrooms:</span>
-                          <span className="font-medium">{listing.bedrooms} BHK</span>
+                          <span className="text-gray-900 font-medium">Bedrooms:</span>
+                          <span className="font-bold text-gray-900">{listing.bedrooms} BHK</span>
                         </div>
                       )}
                     </div>
 
                     {/* View Button */}
                     <Link href={`/property/${listing.id}`}>
-                      <Button className="w-full">View Details</Button>
+                      <button className="w-full px-4 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-bold transition-all shadow-sm">
+                        View Details
+                      </button>
                     </Link>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -482,32 +442,32 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-              <div className="text-sm text-gray-500">Realty</div>
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white rounded-sm transform rotate-45"></div>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Houlnd Realty</span>
             </Link>
             <div className="flex items-center gap-4">
               {user ? (
                 <>
-                  <Link href="/customer/dashboard" className="text-gray-700 hover:text-gray-900">
+                  <Link href="/customer/dashboard" className="text-gray-900 hover:text-gray-900">
                     Dashboard
                   </Link>
-                  <Link href="/customer/saved" className="text-gray-700 hover:text-gray-900">
+                  <Link href="/customer/saved" className="text-gray-900 hover:text-gray-900">
                     Saved
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm">
-                      Login
-                    </Button>
+                  <Link href="/login" className="px-4 py-2 text-gray-900 hover:text-gray-900 hover:bg-gray-100 rounded-full font-medium transition-all">
+                    Login
                   </Link>
-                  <Link href="/register">
-                    <Button size="sm">Sign Up</Button>
+                  <Link href="/register" className="px-4 py-2 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/30">
+                    Sign Up
                   </Link>
                 </>
               )}

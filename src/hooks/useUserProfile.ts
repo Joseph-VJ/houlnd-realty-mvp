@@ -3,6 +3,7 @@
  *
  * This hook fetches the user's profile from the users table.
  * It provides the user's role, full name, phone, email, and other profile data.
+ * Supports both Supabase (online) and Prisma (offline mode).
  *
  * Usage:
  * ```tsx
@@ -18,9 +19,12 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
+
+// Check if offline mode is enabled
+const isOfflineMode = process.env.NEXT_PUBLIC_USE_OFFLINE === 'true'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
 
@@ -35,9 +39,8 @@ export function useUserProfile(userId?: string): UseUserProfileReturn {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!userId) {
       setProfile(null)
       setLoading(false)
@@ -49,17 +52,29 @@ export function useUserProfile(userId?: string): UseUserProfileReturn {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      if (isOfflineMode) {
+        // OFFLINE MODE: Fetch from API endpoint
+        const response = await fetch(`/api/users/${userId}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile')
+        }
+        const data = await response.json()
+        setProfile(data.user)
+      } else {
+        // ONLINE MODE: Use Supabase
+        const supabase = createClient()
+        const { data, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single()
 
-      if (fetchError) {
-        throw fetchError
+        if (fetchError) {
+          throw fetchError
+        }
+
+        setProfile(data)
       }
-
-      setProfile(data)
     } catch (err) {
       console.error('Error fetching user profile:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch user profile')
@@ -67,12 +82,15 @@ export function useUserProfile(userId?: string): UseUserProfileReturn {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   useEffect(() => {
+    // Reset loading state when userId changes
+    if (userId) {
+      setLoading(true)
+    }
     fetchProfile()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [fetchProfile, userId])
 
   return {
     profile,

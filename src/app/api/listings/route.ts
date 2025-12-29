@@ -1,24 +1,10 @@
 import { prisma } from "@/lib/db";
+import { requireAuth, unauthorizedResponse, forbiddenResponse } from "@/lib/apiAuth";
 
 function parseNumber(value: string | null) {
   if (value === null) return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
-}
-
-async function requireUserId(req: Request) {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) {
-    return { error: Response.json({ error: "Missing x-user-id" }, { status: 401 }) };
-  }
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  });
-  if (!user) {
-    return { error: Response.json({ error: "Invalid user" }, { status: 401 }) };
-  }
-  return { user };
 }
 
 export async function GET(req: Request) {
@@ -51,12 +37,12 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireUserId(req);
-  if ("error" in auth) return auth.error;
+  try {
+    const user = await requireAuth(req);
 
-  if (auth.user.role !== "PROMOTER") {
-    return Response.json({ error: "Only PROMOTER can create listings" }, { status: 403 });
-  }
+    if (user.role !== "PROMOTER") {
+      return forbiddenResponse("Only PROMOTER can create listings");
+    }
 
   const body = (await req.json().catch(() => null)) as
     | {
@@ -100,9 +86,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const listing = await prisma.listing.create({
-    data: {
-      promoterId: auth.user.id,
+    const listing = await prisma.listing.create({
+      data: {
+        promoterId: user.userId,
       propertyType: body.propertyType!,
       totalPrice: Math.trunc(body.totalPrice!),
       totalSqft: Math.trunc(body.totalSqft!),
@@ -119,8 +105,20 @@ export async function POST(req: Request) {
         },
       },
     },
-    select: { id: true, status: true, createdAt: true },
-  });
+      select: { id: true, status: true, createdAt: true },
+    });
 
-  return Response.json({ listing });
+    return Response.json({ listing });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('Unauthorized')) {
+        return unauthorizedResponse(error.message);
+      }
+      if (error.message.includes('Forbidden')) {
+        return forbiddenResponse(error.message);
+      }
+    }
+    console.error('Error creating listing:', error);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
