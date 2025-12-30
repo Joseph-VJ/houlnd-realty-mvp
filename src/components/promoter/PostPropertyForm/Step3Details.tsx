@@ -19,6 +19,7 @@ export function Step3Details() {
   }
 
   const isApartment = formData.property_type === 'APARTMENT'
+  const isResidential = ['APARTMENT', 'VILLA', 'HOUSE'].includes(formData.property_type || '')
   const isValid = formData.description && formData.description.trim().length >= 50
 
   return (
@@ -32,8 +33,8 @@ export function Step3Details() {
             </p>
           </div>
 
-          {/* Bedrooms (only for apartments) */}
-          {isApartment && (
+          {/* Bedrooms (only for residential properties) */}
+          {isResidential && (
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 Bedrooms (BHK)
@@ -47,7 +48,7 @@ export function Step3Details() {
                     className={`py-3 px-4 border-2 rounded-xl font-bold transition-all ${
                       formData.bedrooms === num
                         ? 'border-blue-600 bg-blue-50 text-blue-600 scale-105 shadow-sm'
-                        : 'border-gray-300 hover:border-blue-400 hover:scale-105'
+                        : 'border-gray-300 text-gray-900 hover:border-blue-400 hover:scale-105'
                     }`}
                   >
                     {num}
@@ -55,13 +56,13 @@ export function Step3Details() {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Number of bedrooms in the apartment
+                Number of bedrooms in the property
               </p>
             </div>
           )}
 
-          {/* Bathrooms (only for apartments) */}
-          {isApartment && (
+          {/* Bathrooms (only for residential properties) */}
+          {isResidential && (
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 Bathrooms
@@ -75,7 +76,7 @@ export function Step3Details() {
                     className={`py-3 px-4 border-2 rounded-xl font-bold transition-all ${
                       formData.bathrooms === num
                         ? 'border-blue-600 bg-blue-50 text-blue-600 scale-105 shadow-sm'
-                        : 'border-gray-300 hover:border-blue-400 hover:scale-105'
+                        : 'border-gray-300 text-gray-900 hover:border-blue-400 hover:scale-105'
                     }`}
                   >
                     {num}
@@ -83,13 +84,13 @@ export function Step3Details() {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Number of bathrooms in the apartment
+                Number of bathrooms in the property
               </p>
             </div>
           )}
 
-          {/* Furnishing Status (only for apartments) */}
-          {isApartment && (
+          {/* Furnishing Status (only for residential properties) */}
+          {isResidential && (
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 Furnishing Status
@@ -101,7 +102,7 @@ export function Step3Details() {
                   className={`p-5 border-2 rounded-xl text-center transition-all hover:scale-105 ${
                     formData.furnishing_status === 'UNFURNISHED'
                       ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm'
-                      : 'border-gray-300 hover:border-blue-400'
+                      : 'border-gray-300 text-gray-900 hover:border-blue-400'
                   }`}
                 >
                   <div className="font-bold text-lg mb-1">Unfurnished</div>
@@ -113,7 +114,7 @@ export function Step3Details() {
                   className={`p-5 border-2 rounded-xl text-center transition-all hover:scale-105 ${
                     formData.furnishing_status === 'SEMI_FURNISHED'
                       ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm'
-                      : 'border-gray-300 hover:border-blue-400'
+                      : 'border-gray-300 text-gray-900 hover:border-blue-400'
                   }`}
                 >
                   <div className="font-bold text-lg mb-1">Semi-Furnished</div>
@@ -125,7 +126,7 @@ export function Step3Details() {
                   className={`p-5 border-2 rounded-xl text-center transition-all hover:scale-105 ${
                     formData.furnishing_status === 'FURNISHED'
                       ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-sm'
-                      : 'border-gray-300 hover:border-blue-400'
+                      : 'border-gray-300 text-gray-900 hover:border-blue-400'
                   }`}
                 >
                   <div className="font-bold text-lg mb-1">Fully Furnished</div>
@@ -168,7 +169,7 @@ export function Step3Details() {
           </div>
 
           {/* Summary */}
-          {isApartment &&
+          {isResidential &&
             formData.bedrooms !== null &&
             formData.bathrooms !== null &&
             formData.furnishing_status && (

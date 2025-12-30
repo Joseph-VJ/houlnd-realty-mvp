@@ -5,9 +5,8 @@
  * - Welcome message
  * - Stats cards: Total users, Total promoters, Total customers, Pending listings, Live listings, Total unlocks, Total revenue
  * - Quick actions: View Pending Listings, Manage Users
- * - Recent activity feed
  *
- * Uses RPC function: get_user_dashboard_stats()
+ * Uses Prisma database via getDashboardStats server action
  */
 
 'use client'
@@ -17,8 +16,8 @@ import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { createClient } from '@/lib/supabase/client'
 import { signOut } from '@/app/actions/auth'
+import { getDashboardStats } from '@/app/actions/getDashboardStats'
 
 interface DashboardStats {
   total_users: number
@@ -30,46 +29,25 @@ interface DashboardStats {
   total_revenue: number
 }
 
-interface RecentActivity {
-  id: string
-  created_at: string
-  action_type: string
-  description: string
-}
-
 export default function AdminDashboard() {
   const { user } = useAuth()
   const { profile } = useUserProfile(user?.id)
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
 
     const fetchDashboardData = async () => {
       try {
-        // Fetch stats using RPC function
-        const { data: statsData, error: statsError } = await supabase.rpc(
-          'get_user_dashboard_stats',
-          { p_user_id: user.id } as any
-        )
+        // Fetch stats using server action with Prisma
+        const result = await getDashboardStats()
 
-        if (statsError) throw statsError
-
-        setStats(statsData?.[0] || null)
-
-        // Fetch recent activity
-        const { data: activityData, error: activityError } = await supabase
-          .from('activity_logs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10)
-
-        if (activityError) throw activityError
-
-        setRecentActivity(activityData || [])
+        if (result.success && result.stats) {
+          setStats(result.stats)
+        } else {
+          console.error('Error fetching stats:', result.error)
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -78,7 +56,7 @@ export default function AdminDashboard() {
     }
 
     fetchDashboardData()
-  }, [user, supabase])
+  }, [user])
 
   const handleLogout = async () => {
     await signOut()
@@ -358,66 +336,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Recent Activity */}
-              <div className="bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
-                        <p className="text-sm text-gray-900">Latest platform events and actions</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  {recentActivity.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                      </div>
-                      <p className="text-gray-900 font-medium">No recent activity to display</p>
-                      <p className="text-sm text-gray-900 mt-1">Activity will appear here as users interact with the platform</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {recentActivity.slice(0, 6).map((activity, index) => (
-                        <div
-                          key={activity.id}
-                          className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
-                        >
-                          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
-                              {activity.action_type}
-                            </div>
-                            <div className="text-sm text-gray-900 mt-1 line-clamp-2">
-                              {activity.description}
-                            </div>
-                          </div>
-                          <div className="flex-shrink-0 text-right">
-                            <div className="text-xs font-semibold text-gray-900">
-                              {new Date(activity.created_at).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-gray-900">
-                              {new Date(activity.created_at).toLocaleTimeString()}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </main>

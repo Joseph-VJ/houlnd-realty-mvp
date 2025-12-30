@@ -65,6 +65,9 @@ interface PostPropertyStore {
   // Current step (1-8)
   currentStep: number
 
+  // Existing image URLs (for edit mode)
+  existingImageUrls: string[]
+
   // Actions
   setFormData: (data: Partial<PostPropertyFormData>) => void
   nextStep: () => void
@@ -76,6 +79,8 @@ interface PostPropertyStore {
   setAmenities: (amenities: string[]) => void
   addAvailabilitySlot: (slot: { day_of_week: string; start_time: string; end_time: string }) => void
   removeAvailabilitySlot: (index: number) => void
+  initializeWithListing: (listing: any) => void
+  removeExistingImage: (index: number) => void
 }
 
 const initialFormData: PostPropertyFormData = {
@@ -119,6 +124,7 @@ export const usePostPropertyStore = create<PostPropertyStore>()(
     (set) => ({
       formData: initialFormData,
       currentStep: 1,
+      existingImageUrls: [],
 
       setFormData: (data) =>
         set((state) => ({
@@ -144,6 +150,7 @@ export const usePostPropertyStore = create<PostPropertyStore>()(
         set(() => ({
           formData: initialFormData,
           currentStep: 1,
+          existingImageUrls: [],
         })),
 
       addImageFile: (file, previewUrl) =>
@@ -183,6 +190,39 @@ export const usePostPropertyStore = create<PostPropertyStore>()(
             ...state.formData,
             availability_slots: state.formData.availability_slots.filter((_, i) => i !== index),
           },
+        })),
+
+      initializeWithListing: (listing) =>
+        set(() => ({
+          formData: {
+            property_type: listing.property_type || listing.propertyType || '',
+            total_price: listing.total_price || listing.totalPrice || null,
+            total_sqft: listing.total_sqft || listing.totalSqft || null,
+            price_type: listing.price_type || listing.priceType || '',
+            city: listing.city || '',
+            locality: listing.locality || '',
+            address: listing.address || '',
+            latitude: listing.latitude || null,
+            longitude: listing.longitude || null,
+            bedrooms: listing.bedrooms || null,
+            bathrooms: listing.bathrooms || null,
+            description: listing.description || '',
+            furnishing_status: listing.furnishing_status || listing.furnishing || '',
+            amenities: listing.amenities || [],
+            amenities_price: listing.amenities_price || listing.amenitiesPrice || null,
+            imageFiles: [],
+            imagePreviewUrls: [],
+            availability_slots: [],
+            agreement_accepted: true,
+            agreement_accepted_at: new Date(),
+          },
+          existingImageUrls: listing.image_urls || listing.imageUrls || [],
+          currentStep: 1,
+        })),
+
+      removeExistingImage: (index) =>
+        set((state) => ({
+          existingImageUrls: state.existingImageUrls.filter((_, i) => i !== index),
         })),
     }),
     {

@@ -1,10 +1,28 @@
+/**
+ * API Route: Get Listing by ID
+ *
+ * Returns listing details with contact information.
+ * Contact phone is masked unless the requester has unlocked it.
+ *
+ * SECURITY: Uses optionalAuth for secure user identification.
+ * Never trusts client-provided user IDs.
+ */
+
 import { prisma } from "@/lib/db";
 import { maskPhoneE164 } from "@/lib/mask";
+import { optionalAuth } from "@/lib/apiAuth";
 
+/**
+ * Get authenticated user securely (optional - returns null if not authenticated)
+ * SECURITY FIX: Replaced insecure x-user-id header with cryptographic JWT verification
+ */
 async function getRequester(req: Request) {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) return null;
-  return prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  try {
+    const user = await optionalAuth(req);
+    return user ? { id: user.userId } : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -32,6 +50,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   }
 
   // Privacy rule: unmasked phone is returned ONLY if requester has an unlock for this listing.
+  // SECURITY: requester.id is now verified via JWT, not trusted from client header
   const unlock = requester
     ? await prisma.unlock.findUnique({
         where: { userId_listingId: { userId: requester.id, listingId: id } },

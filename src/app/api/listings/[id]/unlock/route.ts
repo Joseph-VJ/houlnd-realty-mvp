@@ -1,22 +1,34 @@
+/**
+ * API Route: Unlock Listing Contact
+ *
+ * Creates an unlock record for a listing, allowing the user to view contact details.
+ * Currently DEV-only shortcut (free unlock for testing).
+ *
+ * SECURITY: Uses requireAuth for secure user identification.
+ * Never trusts client-provided user IDs.
+ */
+
 import { prisma } from "@/lib/db";
+import { requireAuth, unauthorizedResponse } from "@/lib/apiAuth";
 
 function isDev() {
   return process.env.NODE_ENV !== "production";
 }
 
+/**
+ * Require authenticated user securely
+ * SECURITY FIX: Replaced insecure x-user-id header with cryptographic JWT verification
+ */
 async function requireUserId(req: Request) {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) {
-    return { error: Response.json({ error: "Missing x-user-id" }, { status: 401 }) };
+  try {
+    const user = await requireAuth(req);
+    return { user: { id: user.userId } };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: unauthorizedResponse(error.message) };
+    }
+    return { error: unauthorizedResponse('Authentication required') };
   }
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
-  if (!user) {
-    return { error: Response.json({ error: "Invalid user" }, { status: 401 }) };
-  }
-  return { user };
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -29,7 +41,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { id: listingId } = await ctx.params;
 
+  // Verify listing exists
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { id: true, status: true },
+  });
+
+  if (!listing) {
+    return Response.json({ error: "Listing not found" }, { status: 404 });
+  }
+
   // DEV-only shortcut: create unlock record without payment gateway.
+  // SECURITY: auth.user.id is now verified via JWT, not trusted from client header
   const unlock = await prisma.unlock.upsert({
     where: { userId_listingId: { userId: auth.user.id, listingId } },
     create: {
@@ -40,6 +63,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     },
     update: {},
     select: { id: true, userId: true, listingId: true },
+  });
+
+  // Increment unlock count for analytics
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { unlockCount: { increment: 1 } },
   });
 
   return Response.json({ unlock });

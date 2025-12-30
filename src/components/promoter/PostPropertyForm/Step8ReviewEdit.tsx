@@ -1,8 +1,8 @@
 /**
- * Step 8: Review & Submit
+ * Step 8: Review & Update (Edit Mode)
  * - Display summary of all entered data
- * - Upload images to Supabase Storage
- * - Create listing via API
+ * - Upload new images to Supabase Storage
+ * - Update listing via API
  * - Show success/error state
  */
 
@@ -12,12 +12,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePostPropertyStore } from '@/stores/postPropertyStore'
 import { useAuth } from '@/hooks/useAuth'
-import { createListing } from '@/app/actions/createListing'
+import { updateListing } from '@/app/actions/updateListing'
 
-export function Step8Review() {
+interface Step8ReviewEditProps {
+  listingId?: string
+}
+
+export function Step8ReviewEdit({ listingId }: Step8ReviewEditProps) {
   const router = useRouter()
   const { user } = useAuth()
-  const { formData, previousStep, resetForm } = usePostPropertyStore()
+  const { formData, existingImageUrls, previousStep, resetForm } = usePostPropertyStore()
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -80,7 +84,12 @@ export function Step8Review() {
     e.preventDefault()
 
     if (!user) {
-      setError('You must be logged in to submit a listing')
+      setError('You must be logged in to update a listing')
+      return
+    }
+
+    if (!listingId) {
+      setError('Listing ID is missing')
       return
     }
 
@@ -88,8 +97,8 @@ export function Step8Review() {
       setSubmitting(true)
       setError('')
 
-      // Compress and convert images to base64
-      const imageFilesData = await Promise.all(
+      // Compress and convert new images to base64
+      const newImageFilesData = await Promise.all(
         (formData.imageFiles || []).map(async (file) => {
           // Compress image first
           const { blob, type } = await compressImage(file)
@@ -101,7 +110,7 @@ export function Step8Review() {
               resolve({
                 name: file.name,
                 type: type, // Use the compressed blob's type
-                data: reader.result as string
+                data: reader.result as string,
               })
             }
             reader.onerror = reject
@@ -129,33 +138,35 @@ export function Step8Review() {
         amenities_price: formData.amenities_price,
       }
 
-      // Submit listing via server action (supports both online and offline modes)
-      const result = await createListing(propertyData, imageFilesData)
+      // Update listing via server action (supports both online and offline modes)
+      const result = await updateListing(listingId, propertyData, newImageFilesData, existingImageUrls)
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to submit listing')
+        throw new Error(result.error || 'Failed to update listing')
       }
 
       // Reset form
       resetForm()
 
-      // Redirect to success page or my listings
-      router.push(`/promoter/listings?success=true&id=${result.listingId}`)
+      // Redirect to listing detail page
+      router.push(`/property/${listingId}?updated=true`)
     } catch (err) {
-      console.error('Error submitting listing:', err)
-      setError(err instanceof Error ? err.message : 'Failed to submit listing')
+      console.error('Error updating listing:', err)
+      setError(err instanceof Error ? err.message : 'Failed to update listing')
       setSubmitting(false)
     }
   }
+
+  const totalImages = existingImageUrls.length + (formData.imageFiles?.length || 0)
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
         <div className="space-y-6">
           <div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2">Review Your Listing</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-2">Review Your Changes</h2>
             <p className="text-gray-900">
-              Please review all information before submitting your property listing
+              Please review all information before updating your property listing
             </p>
           </div>
 
@@ -275,14 +286,13 @@ export function Step8Review() {
           )}
 
           {/* Photos */}
-          {formData.imageFiles && formData.imageFiles.length > 0 && (
+          {totalImages > 0 && (
             <div className="border border-gray-200 rounded-xl p-5">
-              <h3 className="font-bold text-gray-900 mb-3">
-                Photos ({formData.imageFiles.length})
-              </h3>
+              <h3 className="font-bold text-gray-900 mb-3">Photos ({totalImages})</h3>
               <div className="grid grid-cols-4 gap-3">
-                {formData.imagePreviewUrls?.slice(0, 4).map((url, index) => (
-                  <div key={index} className="aspect-square rounded-xl overflow-hidden border border-gray-200">
+                {/* Existing Images */}
+                {existingImageUrls.slice(0, 4 - (formData.imageFiles?.length || 0)).map((url, index) => (
+                  <div key={`existing-${index}`} className="aspect-square rounded-xl overflow-hidden border border-gray-200">
                     <img
                       src={url}
                       alt={`Property ${index + 1}`}
@@ -290,10 +300,33 @@ export function Step8Review() {
                     />
                   </div>
                 ))}
+                {/* New Images */}
+                {formData.imagePreviewUrls
+                  ?.slice(0, 4 - existingImageUrls.length)
+                  .map((url, index) => (
+                    <div
+                      key={`new-${index}`}
+                      className="aspect-square rounded-xl overflow-hidden border-2 border-green-400 relative"
+                    >
+                      <img
+                        src={url}
+                        alt={`New Property ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-1 right-1 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        NEW
+                      </div>
+                    </div>
+                  ))}
               </div>
-              {formData.imageFiles.length > 4 && (
+              {totalImages > 4 && (
                 <p className="text-sm text-gray-900 font-medium mt-2">
-                  +{formData.imageFiles.length - 4} more images
+                  +{totalImages - 4} more images
+                </p>
+              )}
+              {(formData.imageFiles?.length || 0) > 0 && (
+                <p className="text-sm text-green-700 font-medium mt-2">
+                  ✓ {formData.imageFiles?.length} new image(s) will be added
                 </p>
               )}
             </div>
@@ -320,7 +353,7 @@ export function Step8Review() {
               <div className="flex items-start gap-3">
                 <div className="text-2xl">✕</div>
                 <div className="flex-1">
-                  <div className="font-bold text-red-800">Submission Failed</div>
+                  <div className="font-bold text-red-800">Update Failed</div>
                   <div className="text-sm text-red-700 mt-1">{error}</div>
                 </div>
               </div>
@@ -331,11 +364,10 @@ export function Step8Review() {
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
             <div className="font-bold text-blue-900 mb-2">What Happens Next?</div>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-              <li>Your listing will be submitted for admin review</li>
-              <li>Our team will verify the information within 24-48 hours</li>
-              <li>You&apos;ll receive a notification once approved or if changes are needed</li>
-              <li>Once approved, your listing will be visible to buyers</li>
-              <li>You can track views and unlocks from your dashboard</li>
+              <li>Your listing will be updated immediately</li>
+              <li>Changes will be visible to buyers right away</li>
+              <li>You can continue to edit your listing anytime</li>
+              <li>Track views and unlocks from your dashboard</li>
             </ol>
           </div>
         </div>
@@ -365,11 +397,11 @@ export function Step8Review() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Submitting...
+              Updating...
             </>
           ) : (
             <>
-              Submit Listing for Review
+              Update Listing
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>

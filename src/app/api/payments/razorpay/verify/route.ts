@@ -1,21 +1,32 @@
+/**
+ * API Route: Verify Razorpay Payment
+ *
+ * Verifies Razorpay payment signature and creates unlock record.
+ *
+ * SECURITY: Uses requireAuth for secure user identification.
+ * Never trusts client-provided user IDs.
+ */
+
 import crypto from "crypto";
 
 import { prisma } from "@/lib/db";
 import { isRazorpayEnabled } from "@/lib/env";
+import { requireAuth, unauthorizedResponse } from "@/lib/apiAuth";
 
+/**
+ * Require authenticated user securely
+ * SECURITY FIX: Replaced insecure x-user-id header with cryptographic JWT verification
+ */
 async function requireUserId(req: Request) {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) {
-    return { error: Response.json({ error: "Missing x-user-id" }, { status: 401 }) };
+  try {
+    const user = await requireAuth(req);
+    return { user: { id: user.userId } };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return { error: unauthorizedResponse(error.message) };
+    }
+    return { error: unauthorizedResponse('Authentication required') };
   }
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
-  if (!user) {
-    return { error: Response.json({ error: "Invalid user" }, { status: 401 }) };
-  }
-  return { user };
 }
 
 function verifySignature(orderId: string, paymentId: string, signature: string) {
@@ -75,6 +86,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Order not found" }, { status: 404 });
   }
 
+  // SECURITY: auth.user.id is now verified via JWT, not trusted from client header
   if (paymentOrder.userId !== auth.user.id || paymentOrder.listingId !== body.listingId) {
     return Response.json({ error: "Order mismatch" }, { status: 403 });
   }
@@ -126,6 +138,12 @@ export async function POST(req: Request) {
       paymentRef: body.razorpay_payment_id,
     },
     select: { id: true },
+  });
+
+  // Increment unlock count for analytics
+  await prisma.listing.update({
+    where: { id: paymentOrder.listingId },
+    data: { unlockCount: { increment: 1 } },
   });
 
   return Response.json({ ok: true });

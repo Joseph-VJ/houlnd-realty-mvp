@@ -1,8 +1,6 @@
 /**
- * Create Listing Server Action
- *
- * Supports both online (Supabase) and offline (Prisma) modes.
- * Handles property submission with image uploads.
+ * Update Listing Server Action
+ * Updates an existing property listing
  */
 
 'use server'
@@ -34,7 +32,7 @@ interface PropertyFormData {
 const isOfflineMode = process.env.USE_OFFLINE === 'true'
 
 /**
- * Upload images to storage (Supabase or local mock)
+ * Upload new images to storage
  */
 async function uploadImages(
   imageData: Array<{ name: string; type: string; data: string }>,
@@ -45,18 +43,15 @@ async function uploadImages(
     return imageData.map((file) => file.data)
   }
 
-  // ONLINE MODE: Upload to Supabase Storage
   const supabase = await createClient()
   const imageUrls: string[] = []
 
   for (let i = 0; i < imageData.length; i++) {
     const { name, type, data } = imageData[i]
 
-    // Convert base64 to Buffer
-    const base64Data = data.split(',')[1] // Remove "data:image/xxx;base64," prefix
+    const base64Data = data.split(',')[1]
     const buffer = Buffer.from(base64Data, 'base64')
 
-    // Use appropriate file extension based on actual content type
     const fileExt = type === 'image/png' ? 'png' : 'jpg'
     const fileName = `${Date.now()}-${i}.${fileExt}`
     const filePath = `${userId}/${fileName}`
@@ -73,7 +68,6 @@ async function uploadImages(
       throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`)
     }
 
-    // Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from('property-images').getPublicUrl(filePath)
@@ -85,11 +79,10 @@ async function uploadImages(
 }
 
 /**
- * Get current user ID from session
+ * Get current user ID
  */
 async function getCurrentUserId(): Promise<string | null> {
   if (isOfflineMode) {
-    // OFFLINE MODE: Get user from JWT token
     const cookieStore = await cookies()
     const token = cookieStore.get('offline_token')?.value
 
@@ -104,7 +97,6 @@ async function getCurrentUserId(): Promise<string | null> {
     }
   }
 
-  // ONLINE MODE: Get user from Supabase session
   const supabase = await createClient()
   const {
     data: { user },
@@ -114,31 +106,47 @@ async function getCurrentUserId(): Promise<string | null> {
 }
 
 /**
- * Create a new property listing
+ * Update an existing listing
  */
-export async function createListing(
+export async function updateListing(
+  listingId: string,
   formData: PropertyFormData,
-  imageData: Array<{ name: string; type: string; data: string }>
-): Promise<{ success: boolean; listingId?: string; error?: string }> {
+  newImageData: Array<{ name: string; type: string; data: string }>,
+  existingImageUrls: string[]
+): Promise<{ success: boolean; error?: string }> {
   try {
-    // Get current user
     const userId = await getCurrentUserId()
 
     if (!userId) {
       return {
         success: false,
-        error: 'You must be logged in to submit a listing',
+        error: 'You must be logged in to update a listing',
       }
     }
 
-    // Upload images
-    const imageUrls = await uploadImages(imageData, userId)
+    // Upload new images
+    const newImageUrls = newImageData.length > 0 ? await uploadImages(newImageData, userId) : []
+
+    // Combine existing and new image URLs
+    const allImageUrls = [...existingImageUrls, ...newImageUrls]
 
     if (isOfflineMode) {
       // OFFLINE MODE: Use Prisma
-      const listing = await prisma.listing.create({
+      // Check ownership
+      const listing = await prisma.listing.findUnique({
+        where: { id: listingId },
+      })
+
+      if (!listing || listing.promoterId !== userId) {
+        return {
+          success: false,
+          error: 'Listing not found or you do not have permission to edit it',
+        }
+      }
+
+      await prisma.listing.update({
+        where: { id: listingId },
         data: {
-          promoterId: userId,
           propertyType: formData.property_type,
           totalPrice: formData.total_price,
           totalSqft: formData.total_sqft,
@@ -154,33 +162,36 @@ export async function createListing(
           description: formData.description,
           amenitiesJson: formData.amenities ? JSON.stringify(formData.amenities) : null,
           amenitiesPrice: formData.amenities_price,
-          imageUrls: JSON.stringify(imageUrls),
-          status: 'PENDING_VERIFICATION',
+          imageUrls: JSON.stringify(allImageUrls),
           pricePerSqft: formData.total_price / formData.total_sqft,
-        },
-      })
-
-      // Create agreement acceptance record (2% commission)
-      await prisma.agreementAcceptance.create({
-        data: {
-          listingId: listing.id,
-          acceptedAt: new Date(),
         },
       })
 
       return {
         success: true,
-        listingId: listing.id,
       }
     }
 
     // ONLINE MODE: Use Supabase
     const supabase = await createClient()
 
-    const { data, error: insertError } = await supabase
-      .from('listings')
-      .insert({
-        promoter_id: userId,
+    // Check ownership
+    const { data: listing, error: fetchError } = await (supabase
+      .from('listings') as any)
+      .select('promoter_id')
+      .eq('id', listingId)
+      .single()
+
+    if (fetchError || !listing || listing.promoter_id !== userId) {
+      return {
+        success: false,
+        error: 'Listing not found or you do not have permission to edit it',
+      }
+    }
+
+    const { error: updateError } = await (supabase
+      .from('listings') as any)
+      .update({
         property_type: formData.property_type,
         total_price: formData.total_price,
         total_sqft: formData.total_sqft,
@@ -196,40 +207,22 @@ export async function createListing(
         description: formData.description,
         amenities: formData.amenities,
         amenities_price: formData.amenities_price,
-        image_urls: imageUrls,
-        status: 'PENDING_VERIFICATION',
-      } as any)
-      .select()
-      .single()
+        image_urls: allImageUrls,
+      })
+      .eq('id', listingId)
 
-    if (insertError) {
-      throw insertError
-    }
-
-    // Create agreement acceptance record (2% commission)
-    const agreementData: Database['public']['Tables']['listing_agreement_acceptances']['Insert'] = {
-      listing_id: (data as any)?.id,
-      accepted_at: new Date().toISOString(),
-      agreement_version: '1.0',
-    }
-
-    const { error: agreementError } = await (supabase
-      .from('listing_agreement_acceptances') as any)
-      .insert(agreementData)
-
-    if (agreementError) {
-      throw agreementError
+    if (updateError) {
+      throw updateError
     }
 
     return {
       success: true,
-      listingId: (data as any)?.id,
     }
   } catch (error) {
-    console.error('Error creating listing:', error)
+    console.error('Error updating listing:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to submit listing',
+      error: error instanceof Error ? error.message : 'Failed to update listing',
     }
   }
 }

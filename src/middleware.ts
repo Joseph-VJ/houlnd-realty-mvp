@@ -43,7 +43,7 @@ async function getAuthenticatedUser(request: NextRequest): Promise<{ userId: str
       if (!user) return null
 
       // Get user role from database
-      const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+      const { data: profile } = await (supabase.from('users') as any).select('role').eq('id', user.id).single()
 
       if (!profile) return null
 

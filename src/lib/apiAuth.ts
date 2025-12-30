@@ -105,8 +105,8 @@ async function requireAuthOnline(req: Request): Promise<AuthenticatedUser> {
   }
 
   // Get user role from database
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
+  const { data: profile, error: profileError } = await (supabase
+    .from('users') as any)
     .select('role')
     .eq('id', user.id)
     .single()

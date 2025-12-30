@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { usePostPropertyStore } from '@/stores/postPropertyStore'
 
 export function Step5Photos() {
-  const { formData, addImageFile, removeImageFile, nextStep, previousStep } = usePostPropertyStore()
+  const { formData, existingImageUrls, addImageFile, removeImageFile, removeExistingImage, nextStep, previousStep } = usePostPropertyStore()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
@@ -39,8 +39,9 @@ export function Step5Photos() {
           continue
         }
 
-        // Check max images limit
-        if ((formData.imageFiles?.length || 0) >= 10) {
+        // Check max images limit (total existing + new)
+        const totalImages = existingImageUrls.length + (formData.imageFiles?.length || 0)
+        if (totalImages >= 10) {
           setError('Maximum 10 images allowed')
           break
         }
@@ -62,16 +63,18 @@ export function Step5Photos() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.imageFiles || formData.imageFiles.length < 3) {
-      setError('Please upload at least 3 images')
+    // Check total images (existing + new)
+    const totalImages = existingImageUrls.length + (formData.imageFiles?.length || 0)
+    if (totalImages < 3) {
+      setError('Please have at least 3 images total')
       return
     }
 
     nextStep()
   }
 
-  const imageCount = formData.imageFiles?.length || 0
-  const isValid = imageCount >= 3
+  const totalImageCount = existingImageUrls.length + (formData.imageFiles?.length || 0)
+  const isValid = totalImageCount >= 3
 
   return (
     <form onSubmit={handleSubmit}>
@@ -109,14 +112,19 @@ export function Step5Photos() {
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
-                disabled={uploading || imageCount >= 10}
+                disabled={uploading || totalImageCount >= 10}
               />
             </label>
 
             {/* Upload Stats */}
             <div className="flex justify-between items-center mt-3">
               <div className="text-sm text-gray-900 font-medium">
-                {imageCount} / 10 images uploaded
+                {totalImageCount} / 10 images total
+                {existingImageUrls.length > 0 && (
+                  <span className="ml-2 text-gray-500">
+                    ({existingImageUrls.length} existing, {formData.imageFiles?.length || 0} new)
+                  </span>
+                )}
               </div>
               <div
                 className={`text-sm font-bold ${
@@ -135,33 +143,71 @@ export function Step5Photos() {
             </div>
           )}
 
-          {/* Image Preview Grid */}
+          {/* Existing Images */}
+          {existingImageUrls.length > 0 && (
+            <div>
+              <div className="text-sm font-bold text-gray-800 mb-3">
+                Existing Images ({existingImageUrls.length})
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {existingImageUrls.map((url, index) => (
+                  <div key={`existing-${index}`} className="relative group">
+                    <div className="aspect-square relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all">
+                      <img
+                        src={url}
+                        alt={`Existing Property ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {index === 0 && formData.imageFiles?.length === 0 && (
+                        <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                          Main Photo
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg"
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Image Preview Grid */}
           {formData.imageFiles && formData.imageFiles.length > 0 && (
             <div>
               <div className="text-sm font-bold text-gray-800 mb-3">
-                Uploaded Images ({formData.imageFiles.length})
+                New Images ({formData.imageFiles.length})
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {formData.imageFiles.map((file, index) => {
                   const previewUrl = formData.imagePreviewUrls?.[index] || ''
                   return (
                     <div key={index} className="relative group">
-                      <div className="aspect-square relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all">
+                      <div className="aspect-square relative overflow-hidden rounded-xl border-2 border-green-400 hover:border-green-500 transition-all">
                         <img
                           src={previewUrl}
-                          alt={`Property ${index + 1}`}
+                          alt={`New Property ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        {index === 0 && (
+                        {index === 0 && existingImageUrls.length === 0 && (
                           <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                             Main Photo
                           </div>
                         )}
+                        <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          NEW
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeImageFile(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg"
+                        className="absolute top-2 left-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg"
                         title="Remove image"
                       >
                         ✕
@@ -175,11 +221,17 @@ export function Step5Photos() {
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-900 mt-3">
-                The first image will be used as the main photo. Hover over images to remove
-                them.
-              </p>
             </div>
+          )}
+
+          {/* Info Text */}
+          {totalImageCount > 0 && (
+            <p className="text-xs text-gray-900">
+              {existingImageUrls.length === 0
+                ? 'The first image will be used as the main photo.'
+                : 'The first existing image will be the main photo unless you remove all existing images.'}
+              {' '}Hover over images to remove them.
+            </p>
           )}
 
           {/* Tips */}
