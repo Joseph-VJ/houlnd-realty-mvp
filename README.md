@@ -91,6 +91,8 @@ After seeding the database, use these credentials:
 
 ### For Sellers:
 - ✅ Submit property listings
+- ✅ **Edit existing listings**
+- ✅ Manage property portfolio
 - ✅ Admin quality control
 - ✅ Get maximum leads (FREE unlock for buyers)
 - 💰 Future: Premium listings (₹2,999/month)
@@ -99,6 +101,8 @@ After seeding the database, use these credentials:
 ### For Admins:
 - ✅ Review pending properties
 - ✅ Approve/reject listings
+- ✅ **Dashboard with real-time statistics**
+- ✅ User management
 - ✅ Quality control system
 
 ---
@@ -252,21 +256,33 @@ npm run lint              # Run ESLint
 - Property browsing and search
 - User authentication (dual-mode)
 - Property submission workflow
+- **Property editing with full 8-step form**
 - Admin approval system
+- **Admin dashboard with Prisma statistics**
 - **FREE contact unlock (both modes)**
 - Save/unsave properties
 - Complete offline mode support
+- Base64 image storage for offline mode
 
 ### 🔄 Future Enhancements:
 - Seller analytics dashboard
 - Premium listing features
 - Email notifications
-- Appointment scheduling
+- Enhanced appointment scheduling
 - Mobile app
+- Image optimization and thumbnails
 
 ---
 
-## 🐛 Recent Fixes
+## 🐛 Recent Updates
+
+**December 30, 2025:**
+- ✅ Added complete property editing functionality
+- ✅ Migrated admin dashboard from Supabase to Prisma
+- ✅ Fixed image storage (base64 in offline mode)
+- ✅ Created Prisma client singleton
+- ✅ Fixed Next.js 15 async params handling
+- ✅ Updated database queries to use correct status values
 
 **December 26, 2025:**
 - ✅ Fixed authentication cookie mismatch
@@ -274,7 +290,7 @@ npm run lint              # Run ESLint
 - ✅ Organized documentation into folders
 - ✅ Login now works correctly in offline mode
 
-**📖 [Complete Change Log](docs/technical/CHANGES_SUMMARY.md)**
+**📖 [Complete Session Log](docs/SESSION_DEC_30_EDIT_AND_DASHBOARD.md)**
 
 ---
 
@@ -331,4 +347,4 @@ This is a proprietary MVP project.
 
 **Built with ❤️ using Next.js 16**
 
-**Last Updated:** December 26, 2025
+**Last Updated:** December 30, 2025
