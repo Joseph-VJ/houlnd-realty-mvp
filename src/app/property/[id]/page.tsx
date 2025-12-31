@@ -16,8 +16,8 @@
 
 'use client'
 
-import { useEffect, useState, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -97,15 +97,10 @@ async function loadRazorpayScript(): Promise<boolean> {
   })
 }
 
-export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  // Unwrap params Promise using React.use()
-  let listingId: string = ''
-  try {
-    const resolvedParams = use(params)
-    listingId = resolvedParams.id
-  } catch (e) {
-    console.error('Error resolving params:', e)
-  }
+export default function PropertyDetailsPage() {
+  // Use useParams hook instead of Promise params
+  const params = useParams()
+  const listingId = params?.id as string || ''
 
   const router = useRouter()
   const { user } = useAuth()
