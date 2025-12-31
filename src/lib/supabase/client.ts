@@ -32,10 +32,19 @@ import type { Database } from '@/types/database.types'
  * @returns Supabase browser client instance
  */
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables')
+    // Return a mock client that won't crash
+    return createBrowserClient<Database>(
+      'https://placeholder.supabase.co',
+      'placeholder-key'
+    )
+  }
+
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
 }
 
 /**

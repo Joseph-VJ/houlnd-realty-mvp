@@ -99,7 +99,13 @@ async function loadRazorpayScript(): Promise<boolean> {
 
 export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   // Unwrap params Promise using React.use()
-  const { id: listingId } = use(params)
+  let listingId: string = ''
+  try {
+    const resolvedParams = use(params)
+    listingId = resolvedParams.id
+  } catch (e) {
+    console.error('Error resolving params:', e)
+  }
 
   const router = useRouter()
   const { user } = useAuth()
@@ -289,7 +295,20 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ id: 
 
   if (!listing) return null
 
-  const images = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls : []
+  // Safely get images array
+  let images: string[] = []
+  try {
+    if (listing.image_urls) {
+      if (typeof listing.image_urls === 'string') {
+        images = JSON.parse(listing.image_urls)
+      } else if (Array.isArray(listing.image_urls)) {
+        images = listing.image_urls
+      }
+    }
+  } catch (e) {
+    console.error('Error parsing image_urls:', e)
+    images = []
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
