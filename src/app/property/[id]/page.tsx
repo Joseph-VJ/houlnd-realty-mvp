@@ -136,7 +136,7 @@ export default function PropertyDetailsPage() {
         return
       }
 
-      const data = result.data
+      const data = result.data as any
 
       // Only show LIVE listings to customers, or show own listings to promoters
       if (data.status !== 'LIVE' && (!user || data.promoter_id !== user.id)) {
@@ -144,7 +144,7 @@ export default function PropertyDetailsPage() {
         return
       }
 
-      setListing(data as any)
+      setListing(data)
     } catch (error) {
       console.error('Error fetching listing:', error)
       setError('Failed to load property details')

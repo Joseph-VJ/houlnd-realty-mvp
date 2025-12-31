@@ -301,10 +301,11 @@ export async function getListingById(listingId: string) {
     }
 
     // Parse JSON fields if they're strings
+    const listingData = data as Record<string, any>
     const transformedData = {
-      ...data,
-      image_urls: typeof data.image_urls === 'string' ? JSON.parse(data.image_urls || '[]') : (data.image_urls || []),
-      amenities: typeof data.amenities_json === 'string' ? JSON.parse(data.amenities_json || '[]') : (data.amenities_json || [])
+      ...listingData,
+      image_urls: typeof listingData.image_urls === 'string' ? JSON.parse(listingData.image_urls || '[]') : (listingData.image_urls || []),
+      amenities: typeof listingData.amenities_json === 'string' ? JSON.parse(listingData.amenities_json || '[]') : (listingData.amenities_json || [])
     }
 
     return {
