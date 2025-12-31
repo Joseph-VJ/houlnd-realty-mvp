@@ -185,9 +185,16 @@ export async function searchListings(filters: SearchFilters) {
       }
     }
 
+    // Parse JSON fields for each listing
+    const transformedData = (data || []).map((listing: any) => ({
+      ...listing,
+      image_urls: typeof listing.image_urls === 'string' ? JSON.parse(listing.image_urls || '[]') : (listing.image_urls || []),
+      amenities: typeof listing.amenities_json === 'string' ? JSON.parse(listing.amenities_json || '[]') : (listing.amenities_json || [])
+    }))
+
     return {
       success: true,
-      data: data || []
+      data: transformedData
     }
   } catch (error) {
     console.error('Search listings error:', error)
@@ -293,9 +300,16 @@ export async function getListingById(listingId: string) {
       }
     }
 
+    // Parse JSON fields if they're strings
+    const transformedData = {
+      ...data,
+      image_urls: typeof data.image_urls === 'string' ? JSON.parse(data.image_urls || '[]') : (data.image_urls || []),
+      amenities: typeof data.amenities_json === 'string' ? JSON.parse(data.amenities_json || '[]') : (data.amenities_json || [])
+    }
+
     return {
       success: true,
-      data
+      data: transformedData
     }
   } catch (error) {
     console.error('Get listing by ID error:', error)
