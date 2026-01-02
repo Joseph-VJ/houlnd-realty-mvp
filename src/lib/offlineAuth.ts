@@ -11,33 +11,44 @@
 
 import * as jose from 'jose';
 
-// Validate JWT_SECRET strength
-const JWT_SECRET_STRING = process.env.JWT_SECRET;
+// Lazy initialization of JWT_SECRET to avoid build-time errors
+// when environment variables aren't available
+let JWT_SECRET: Uint8Array | null = null;
 
-if (!JWT_SECRET_STRING) {
-  throw new Error(
-    'SECURITY ERROR: JWT_SECRET environment variable is required. ' +
-      'Set a strong secret (minimum 32 characters) in your .env file.'
-  );
+function getJwtSecret(): Uint8Array {
+  if (JWT_SECRET) {
+    return JWT_SECRET;
+  }
+
+  // Validate JWT_SECRET strength
+  const JWT_SECRET_STRING = process.env.JWT_SECRET;
+
+  if (!JWT_SECRET_STRING) {
+    throw new Error(
+      'SECURITY ERROR: JWT_SECRET environment variable is required. ' +
+        'Set a strong secret (minimum 32 characters) in your .env file.'
+    );
+  }
+
+  if (JWT_SECRET_STRING.length < 32) {
+    throw new Error(
+      `SECURITY ERROR: JWT_SECRET must be at least 32 characters long. ` +
+        `Current length: ${JWT_SECRET_STRING.length}. ` +
+        `Generate a secure secret: openssl rand -base64 32`
+    );
+  }
+
+  // Warn about weak default (should never happen in production)
+  if (JWT_SECRET_STRING === 'offline-test-secret-key') {
+    console.warn(
+      '⚠️  WARNING: Using default JWT_SECRET! This is INSECURE for production. ' +
+        'Generate a strong secret: openssl rand -base64 32'
+    );
+  }
+
+  JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
+  return JWT_SECRET;
 }
-
-if (JWT_SECRET_STRING.length < 32) {
-  throw new Error(
-    `SECURITY ERROR: JWT_SECRET must be at least 32 characters long. ` +
-      `Current length: ${JWT_SECRET_STRING.length}. ` +
-      `Generate a secure secret: openssl rand -base64 32`
-  );
-}
-
-// Warn about weak default (should never happen in production)
-if (JWT_SECRET_STRING === 'offline-test-secret-key') {
-  console.warn(
-    '⚠️  WARNING: Using default JWT_SECRET! This is INSECURE for production. ' +
-      'Generate a strong secret: openssl rand -base64 32'
-  );
-}
-
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 
 export interface OfflineUser {
   id: string;
@@ -106,7 +117,7 @@ export async function offlineSignUp(email: string, password: string, fullName: s
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     return {
       data: {
@@ -175,7 +186,7 @@ export async function offlineSignIn(email: string, password: string) {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     return {
       data: {
@@ -217,7 +228,7 @@ export async function offlineSignOut() {
  */
 export async function offlineGetUser(token: string) {
   try {
-    const { payload } = await jose.jwtVerify(token, JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, getJwtSecret());
     const prisma = await getPrismaClient();
 
     const user = await prisma.user.findUnique({
@@ -258,7 +269,7 @@ export async function offlineGetUser(token: string) {
  */
 export async function offlineVerifyToken(token: string) {
   try {
-    const { payload } = await jose.jwtVerify(token, JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, getJwtSecret());
     return {
       valid: true,
       payload
