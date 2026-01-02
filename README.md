@@ -157,11 +157,19 @@ houlnd-realty-mvp/
 ├── prisma/
 │   ├── schema.prisma         # Database schema
 │   └── seed.ts               # Seed data
+├── scripts/                  # Utility scripts
+│   ├── database/             # SQL scripts (RLS, queries)
+│   ├── setup/                # Setup scripts (users, env)
+│   ├── tests/                # Test scripts
+│   └── README.md             # Script documentation
 ├── docs/                     # 📚 Complete documentation
-│   ├── README.md
-│   ├── business/
-│   ├── technical/
-│   └── testing/
+│   ├── setup/                # Getting started guides
+│   ├── deployment/           # Vercel deployment docs
+│   ├── migration/            # Database migration docs
+│   ├── business/             # Business model docs
+│   ├── technical/            # Technical docs
+│   ├── testing/              # Test documentation
+│   └── archive/              # Old/reference docs
 └── README.md                 # This file
 ```
 
@@ -325,7 +333,8 @@ npm run lint              # Run ESLint
 3. Deploy to Vercel
 4. Run migrations
 
-**📖 [Deployment Guide](https://nextjs.org/docs/app/building-your-application/deploying)**
+**📖 [Deployment Checklist](docs/deployment/DEPLOYMENT_CHECKLIST.md)**
+**📖 [Troubleshooting Guide](docs/deployment/DEPLOYMENT_TROUBLESHOOTING.md)**
 
 ---
 
@@ -336,6 +345,8 @@ npm run lint              # Run ESLint
 - 📖 [Project Overview](docs/PROJECT_OVERVIEW.md)
 - ⚡ [Quick Reference](docs/QUICK_REFERENCE.md)
 - 🧪 [Testing Guide](docs/testing/START_TESTING.md)
+- 🚀 [Deployment Guide](docs/deployment/DEPLOYMENT_CHECKLIST.md)
+- 🗄️ [Scripts Documentation](scripts/README.md)
 
 ---
 

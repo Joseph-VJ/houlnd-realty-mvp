@@ -67,7 +67,7 @@ export async function getDashboardStats(): Promise<{
       prisma.user.count(),
       prisma.user.count({ where: { role: 'PROMOTER' } }),
       prisma.user.count({ where: { role: 'CUSTOMER' } }),
-      prisma.listing.count({ where: { status: 'PENDING' } }),
+      prisma.listing.count({ where: { status: 'PENDING_VERIFICATION' } }),
       prisma.listing.count({ where: { status: 'LIVE' } }),
       prisma.unlock.count(),
     ])

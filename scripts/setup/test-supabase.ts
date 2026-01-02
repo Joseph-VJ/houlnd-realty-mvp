@@ -1,11 +1,13 @@
 /**
  * Test Supabase connection and query
+ * 
+ * Usage: npx tsx scripts/setup/test-supabase.ts
  */
 
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://bkwvcwcbdetflnkhtxum.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrd3Zjd2NiZGV0Zmxua2h0eHVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDUxNTMsImV4cCI6MjA4MDUyMTE1M30.TENNgHkqQUPftIagj0zTmkt3d3wYT26412qwDigc9wg'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bkwvcwcbdetflnkhtxum.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrd3Zjd2NiZGV0Zmxua2h0eHVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5NDUxNTMsImV4cCI6MjA4MDUyMTE1M30.TENNgHkqQUPftIagj0zTmkt3d3wYT26412qwDigc9wg'
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 

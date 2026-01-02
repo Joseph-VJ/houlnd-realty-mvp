@@ -1,6 +1,8 @@
 /**
  * Create test users in Supabase Auth + Database
  * This creates users in both auth.users and public.users tables
+ * 
+ * Usage: npx tsx scripts/setup/create-supabase-users.ts
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -104,11 +106,11 @@ async function main() {
     '+919876543212'
   )
 
-  console.log('\n🎉 All users created successfully!')
-  console.log('\n📝 Test Credentials:')
-  console.log('   Customer: customer@test.com / Customer123!')
-  console.log('   Promoter: promoter@test.com / Promoter123!')
-  console.log('   Admin: admin@test.com / Admin123!')
+  console.log('\n🎉 Done! Test users created successfully.\n')
+  console.log('Credentials:')
+  console.log('  Customer: customer@test.com / Customer123!')
+  console.log('  Promoter: promoter@test.com / Promoter123!')
+  console.log('  Admin: admin@test.com / Admin123!')
 }
 
-main()
+main().catch(console.error)

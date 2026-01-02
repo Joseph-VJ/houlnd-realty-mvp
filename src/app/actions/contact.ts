@@ -187,8 +187,10 @@ export async function unlockContact(
         // Create unlock record (FREE - generates leads for sellers)
         await prisma.unlock.create({
           data: {
+            id: undefined, // Let database generate UUID
             userId,
             listingId,
+            unlockedAt: new Date(),
           },
         })
 
@@ -257,9 +259,24 @@ export async function unlockContact(
     }
   } catch (error) {
     console.error('Unlock contact error:', error)
+    
+    // Provide user-friendly error messages
+    if (error instanceof Error) {
+      if (error.message.includes('constraint')) {
+        return {
+          success: false,
+          error: 'This contact has already been unlocked. Please refresh the page.',
+        }
+      }
+      return {
+        success: false,
+        error: `Failed to unlock contact: ${error.message}`,
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to unlock contact',
+      error: 'An unexpected error occurred. Please try again or contact support.',
     }
   }
 }
