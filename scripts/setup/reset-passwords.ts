@@ -1,5 +1,7 @@
 /**
  * Reset passwords for test users in Supabase Auth
+ * 
+ * Usage: npx tsx scripts/setup/reset-passwords.ts
  */
 
 import { createClient } from '@supabase/supabase-js'

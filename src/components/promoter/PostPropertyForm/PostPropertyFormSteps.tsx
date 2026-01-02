@@ -73,7 +73,11 @@ export function PostPropertyFormSteps({ listingId, isEditMode = false }: PostPro
               </div>
               <span className="text-xl font-bold text-gray-900">Houlnd Realty</span>
             </Link>
-            <Link href="/promoter/listings">
+            <Link href="/promoter/listings" onClick={() => {
+              // Reset form when canceling
+              const { resetForm } = usePostPropertyStore.getState()
+              resetForm()
+            }}>
               <button className="flex items-center gap-2 px-4 py-2 text-gray-900 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-all">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

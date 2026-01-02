@@ -42,6 +42,7 @@ async function uploadImages(
 ): Promise<string[]> {
   if (isOfflineMode) {
     // OFFLINE MODE: Return base64 data URLs (stores images directly in DB)
+    console.log(`[OFFLINE MODE] Storing ${imageData.length} images as base64 data URLs`)
     return imageData.map((file) => file.data)
   }
 
@@ -54,6 +55,11 @@ async function uploadImages(
 
     // Convert base64 to Buffer
     const base64Data = data.split(',')[1] // Remove "data:image/xxx;base64," prefix
+    
+    if (!base64Data) {
+      throw new Error(`Invalid image data format for image ${i + 1}`)
+    }
+    
     const buffer = Buffer.from(base64Data, 'base64')
 
     // Use appropriate file extension based on actual content type
@@ -61,24 +67,31 @@ async function uploadImages(
     const fileName = `${Date.now()}-${i}.${fileExt}`
     const filePath = `${userId}/${fileName}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('property-images')
-      .upload(filePath, buffer, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: type,
-      })
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('property-images')
+        .upload(filePath, buffer, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: type,
+        })
 
-    if (uploadError) {
-      throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`)
+      if (uploadError) {
+        console.error(`Upload error for image ${i + 1}:`, uploadError)
+        throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`)
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('property-images').getPublicUrl(filePath)
+
+      imageUrls.push(publicUrl)
+    } catch (uploadError) {
+      // If storage bucket doesn't exist or other error, fall back to base64 in online mode
+      console.warn(`Storage upload failed for image ${i + 1}, using base64 fallback:`, uploadError)
+      imageUrls.push(data) // Use base64 data URL as fallback
     }
-
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('property-images').getPublicUrl(filePath)
-
-    imageUrls.push(publicUrl)
   }
 
   return imageUrls
@@ -121,18 +134,45 @@ export async function createListing(
   imageData: Array<{ name: string; type: string; data: string }>
 ): Promise<{ success: boolean; listingId?: string; error?: string }> {
   try {
+    // Validate input
+    if (!formData || !imageData || imageData.length === 0) {
+      return {
+        success: false,
+        error: 'Missing required data. Please ensure all fields are filled and at least one image is uploaded.',
+      }
+    }
+
+    if (imageData.length < 3) {
+      return {
+        success: false,
+        error: 'Please upload at least 3 images of your property.',
+      }
+    }
+
     // Get current user
     const userId = await getCurrentUserId()
 
     if (!userId) {
       return {
         success: false,
-        error: 'You must be logged in to submit a listing',
+        error: 'You must be logged in to submit a listing. Please log in and try again.',
       }
     }
 
-    // Upload images
-    const imageUrls = await uploadImages(imageData, userId)
+    // Upload images with better error handling
+    let imageUrls: string[]
+    try {
+      imageUrls = await uploadImages(imageData, userId)
+      console.log(`Successfully processed ${imageUrls.length} images`)
+    } catch (uploadError) {
+      console.error('Image upload error:', uploadError)
+      return {
+        success: false,
+        error: uploadError instanceof Error 
+          ? `Image upload failed: ${uploadError.message}` 
+          : 'Failed to upload images. Please try again with smaller image files.',
+      }
+    }
 
     if (isOfflineMode) {
       // OFFLINE MODE: Use Prisma
@@ -227,9 +267,30 @@ export async function createListing(
     }
   } catch (error) {
     console.error('Error creating listing:', error)
+    
+    // Provide user-friendly error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Bucket not found')) {
+        return {
+          success: false,
+          error: 'Image storage is not configured. Your listing has been saved but images could not be uploaded. Please contact support.',
+        }
+      }
+      if (error.message.includes('Network')) {
+        return {
+          success: false,
+          error: 'Network error. Please check your internet connection and try again.',
+        }
+      }
+      return {
+        success: false,
+        error: `Submission failed: ${error.message}`,
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to submit listing',
+      error: 'An unexpected error occurred while submitting your listing. Please try again.',
     }
   }
 }

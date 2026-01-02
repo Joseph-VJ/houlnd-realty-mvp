@@ -580,6 +580,98 @@ export async function getPromoterRecentUnlocks(): Promise<{
 }
 
 /**
+ * Get all users (admin only)
+ */
+export async function getAllUsers(): Promise<{
+  success: boolean
+  data?: Array<{
+    id: string
+    email: string | null
+    phone_e164: string | null
+    full_name: string | null
+    role: string
+    created_at: string
+  }>
+  error?: string
+}> {
+  try {
+    const adminAuth = await getCurrentAdminUser()
+
+    if ('error' in adminAuth && adminAuth.error) {
+      return {
+        success: false,
+        error: adminAuth.error
+      }
+    }
+
+    if (isOfflineMode) {
+      // OFFLINE MODE: Use Prisma
+      const { PrismaClient } = await import('@prisma/client')
+      const prisma = new PrismaClient()
+
+      try {
+        const users = await prisma.user.findMany({
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            email: true,
+            phoneE164: true,
+            fullName: true,
+            role: true,
+            createdAt: true
+          }
+        })
+
+        await prisma.$disconnect()
+
+        // Transform to match expected format
+        const transformedUsers = users.map((user: any) => ({
+          id: user.id,
+          email: user.email,
+          phone_e164: user.phoneE164,
+          full_name: user.fullName,
+          role: user.role,
+          created_at: user.createdAt.toISOString()
+        }))
+
+        return {
+          success: true,
+          data: transformedUsers
+        }
+      } catch (error) {
+        await prisma.$disconnect()
+        throw error
+      }
+    }
+
+    // ONLINE MODE: Use Supabase
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+
+    return {
+      success: true,
+      data: data || []
+    }
+  } catch (error) {
+    console.error('Get all users error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch users'
+    }
+  }
+}
+
+/**
  * Get promoter's own listings (supports filtering by status)
  */
 export async function getPromoterListings(statusFilter?: string): Promise<{

@@ -9,6 +9,16 @@ Complete documentation for the Houlnd Realty MVP project.
 ### New to the Project?
 1. Read [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) - Complete project documentation
 2. Read [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick credentials and commands
+3. Read [setup/QUICK_START.md](setup/QUICK_START.md) - Development setup
+
+### Want to Deploy?
+1. Read [deployment/DEPLOYMENT_CHECKLIST.md](deployment/DEPLOYMENT_CHECKLIST.md) - Pre-deployment tasks
+2. Read [deployment/DEPLOYMENT_TROUBLESHOOTING.md](deployment/DEPLOYMENT_TROUBLESHOOTING.md) - Common issues
+3. Read [deployment/FIX_NOW.md](deployment/FIX_NOW.md) - Quick fixes
+
+### Database Migration?
+1. Read [migration/MIGRATION_GUIDE.md](migration/MIGRATION_GUIDE.md) - SQLite to PostgreSQL
+2. Read [migration/ISSUES_AND_FIXES.md](migration/ISSUES_AND_FIXES.md) - Known issues
 
 ### Want to Test?
 1. Read [testing/START_TESTING.md](testing/START_TESTING.md) - Step-by-step testing guide
@@ -30,45 +40,42 @@ docs/
 ├── README.md (this file)
 ├── PROJECT_OVERVIEW.md - Complete project documentation
 ├── QUICK_REFERENCE.md - Quick credentials and commands reference
+├── DESIGN_SYSTEM.md - UI/UX guidelines
+├── UI_COMPONENTS.md - Component library
+│
+├── setup/ - Getting started guides
+│   ├── QUICK_START.md - Development setup
+│   └── SUPABASE_SETUP_GUIDE.md - Database configuration
+│
+├── deployment/ - Vercel deployment
+│   ├── DEPLOYMENT_CHECKLIST.md - Pre-deployment tasks
+│   ├── DEPLOYMENT_TROUBLESHOOTING.md - Common issues
+│   ├── FIX_NOW.md - Quick deployment fixes
+│   ├── VERCEL_DEPLOYMENT_FIX.md - Vercel-specific fixes
+│   └── VERCEL_QUICK_FIX.md - Quick Vercel fixes
+│
+├── migration/ - Database migration
+│   ├── MIGRATION_GUIDE.md - SQLite to PostgreSQL
+│   ├── MIGRATION_STATUS.md - Current status
+│   ├── README_MIGRATION.md - Migration overview
+│   └── ISSUES_AND_FIXES.md - Known issues
 │
 ├── business/ - Business model and strategy
-│   ├── BUSINESS_MODEL.md - Revenue model and competitive positioning
+│   ├── BUSINESS_MODEL.md - Revenue model and positioning
 │   └── FREE_FOR_BUYERS.md - FREE contact unlock explanation
 │
 ├── technical/ - Technical implementation details
 │   ├── SESSION_FIX_DEC_26.md - Latest authentication fix
 │   ├── CHANGES_SUMMARY.md - Complete change log
 │   ├── OFFLINE_MODE_COMPLETE.md - Offline mode implementation
-│   ├── ALL_FIXES_IMPLEMENTED.md - All fixes summary
-│   ├── COMPREHENSIVE_CODEBASE_ANALYSIS.md - Full codebase audit
-│   ├── CRITICAL_BUG_FIXED.md - Property detail page fix
-│   ├── FIXES_COMPLETED.md - Completed fixes list
-│   ├── IMPLEMENTATION_VERIFICATION.md - Implementation verification
-│   ├── OFFLINE_MODE.md - Offline mode details
-│   ├── SELLER_LISTING_FLOW_ANALYSIS.md - Seller workflow analysis
-│   └── SUPABASE_SETUP.md - Supabase configuration guide
+│   └── ... (more technical docs)
 │
 ├── testing/ - Testing guides and results
-│   ├── START_TESTING.md - Step-by-step testing workflows (PRIMARY)
-│   ├── AI_BROWSER_TESTING_GUIDE.md - AI browser testing guide
-│   ├── AI_TESTING_RESULTS.md - AI testing results
-│   ├── QUICK_TEST_GUIDE.md - Quick test reference
-│   ├── README_TESTING.md - Testing README
-│   ├── READY_TO_TEST.md - Testing checklist
-│   ├── TEST_REPORT_COMPREHENSIVE.md - Comprehensive test report
-│   └── TESTING_SUMMARY.md - Testing summary
+│   ├── START_TESTING.md - Step-by-step testing (PRIMARY)
+│   └── ... (more testing docs)
 │
-└── archive/ - Old/redundant documentation (reference only)
-    ├── ANSWER_TO_YOUR_QUESTION.md
-    ├── AUDIT_DOCUMENTATION_INDEX.md
-    ├── AUDIT_FINDINGS_AND_RECOMMENDATIONS.md
-    ├── CURRENT_STATUS_AND_NEXT_STEPS.md
-    ├── EXECUTIVE_SUMMARY_AUDIT.md
-    ├── FINAL_SUMMARY.md
-    ├── FINAL_UPDATE.md
-    ├── FULL_PROJECT_AUDIT.md
-    ├── QUICK_ACTION_PLAN.md
-    └── QUICK_FIX_GUIDE.md
+└── archive/ - Old/reference documentation
+    └── ... (archived docs)
 ```
 
 ---

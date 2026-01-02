@@ -152,6 +152,11 @@ export async function saveListing(
 
         await prisma.$disconnect()
 
+        // Revalidate to refresh UI
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/customer/saved')
+        revalidatePath('/search')
+
         return { success: true }
       } catch (error) {
         await prisma.$disconnect()
@@ -176,9 +181,23 @@ export async function saveListing(
     return { success: true }
   } catch (error) {
     console.error('Save listing error:', error)
+    
+    // Provide user-friendly error messages  
+    if (error instanceof Error) {
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
+        return {
+          success: true, // Already saved is not an error
+        }
+      }
+      return {
+        success: false,
+        error: `Failed to save property: ${error.message}`,
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save listing',
+      error: 'Could not save this property. Please try again.',
     }
   }
 }
@@ -403,6 +422,11 @@ export async function unsaveListing(
 
         await prisma.$disconnect()
 
+        // Revalidate to refresh UI
+        const { revalidatePath } = await import('next/cache')
+        revalidatePath('/customer/saved')
+        revalidatePath('/search')
+
         return { success: true }
       } catch (error) {
         await prisma.$disconnect()
@@ -428,9 +452,18 @@ export async function unsaveListing(
     return { success: true }
   } catch (error) {
     console.error('Unsave listing error:', error)
+    
+    // Provide user-friendly error messages
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: `Failed to remove saved property: ${error.message}`,
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to unsave listing',
+      error: 'Could not remove this property from your saved list. Please try again.',
     }
   }
 }
