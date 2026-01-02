@@ -10,7 +10,7 @@
 
 import { prisma } from "@/lib/db";
 import { maskPhoneE164 } from "@/lib/mask";
-import { optionalAuth } from "@/lib/apiAuth";
+import { optionalAuth, requireAuth, unauthorizedResponse } from "@/lib/apiAuth";
 
 /**
  * Get authenticated user securely (optional - returns null if not authenticated)
@@ -79,4 +79,51 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     },
     contact,
   });
+}
+/**
+ * Delete a listing (soft delete)
+ * Only the promoter who created the listing can delete it
+ * SECURITY: Uses requireAuth for secure user identification
+ */
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireAuth(req);
+    const { id } = await ctx.params;
+
+    // Find the listing
+    const listing = await prisma.listing.findUnique({
+      where: { id },
+      select: { id: true, promoterId: true, status: true },
+    });
+
+    if (!listing) {
+      return Response.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    // Check if the user is the owner
+    if (listing.promoterId !== user.userId) {
+      return Response.json({ error: "Unauthorized: You can only delete your own listings" }, { status: 403 });
+    }
+
+    // Only allow deletion of DRAFT and REJECTED listings
+    if (listing.status !== 'DRAFT' && listing.status !== 'REJECTED') {
+      return Response.json({ 
+        error: "Only DRAFT and REJECTED listings can be deleted" 
+      }, { status: 400 });
+    }
+
+    // Soft delete by setting deletedAt
+    await prisma.listing.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    return Response.json({ success: true, message: "Listing deleted successfully" });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return unauthorizedResponse(error.message);
+    }
+    console.error('Delete listing error:', error);
+    return Response.json({ error: "Failed to delete listing" }, { status: 500 });
+  }
 }

@@ -150,12 +150,20 @@ export async function saveListing(
           },
         })
 
+        // Increment save count on the listing
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { saveCount: { increment: 1 } },
+        })
+
         await prisma.$disconnect()
 
         // Revalidate to refresh UI
         const { revalidatePath } = await import('next/cache')
         revalidatePath('/customer/saved')
+        revalidatePath('/customer/dashboard')
         revalidatePath('/search')
+        revalidatePath('/property/' + listingId)
 
         return { success: true }
       } catch (error) {
@@ -166,6 +174,19 @@ export async function saveListing(
 
     // ONLINE MODE: Use Supabase
     const supabase = await createClient()
+    
+    // Check if already saved
+    const { data: existing } = await supabase
+      .from('saved_properties')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('listing_id', listingId)
+      .single()
+    
+    if (existing) {
+      return { success: true } // Already saved
+    }
+    
     const { error } = await supabase.from('saved_properties').insert({
       user_id: userId,
       listing_id: listingId,
@@ -177,6 +198,16 @@ export async function saveListing(
         error: error.message,
       }
     }
+
+    // Increment save count on the listing
+    await supabase.rpc('increment_listing_save_count', { listing_id: listingId })
+
+    // Revalidate to refresh UI
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath('/customer/saved')
+    revalidatePath('/customer/dashboard')
+    revalidatePath('/search')
+    revalidatePath('/property/' + listingId)
 
     return { success: true }
   } catch (error) {
@@ -420,12 +451,20 @@ export async function unsaveListing(
           },
         })
 
+        // Decrement save count on the listing
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { saveCount: { decrement: 1 } },
+        })
+
         await prisma.$disconnect()
 
         // Revalidate to refresh UI
         const { revalidatePath } = await import('next/cache')
         revalidatePath('/customer/saved')
+        revalidatePath('/customer/dashboard')
         revalidatePath('/search')
+        revalidatePath('/property/' + listingId)
 
         return { success: true }
       } catch (error) {
@@ -448,6 +487,16 @@ export async function unsaveListing(
         error: error.message,
       }
     }
+
+    // Decrement save count on the listing
+    await supabase.rpc('decrement_listing_save_count', { listing_id: listingId })
+
+    // Revalidate to refresh UI
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath('/customer/saved')
+    revalidatePath('/customer/dashboard')
+    revalidatePath('/search')
+    revalidatePath('/property/' + listingId)
 
     return { success: true }
   } catch (error) {

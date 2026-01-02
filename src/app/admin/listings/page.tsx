@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getAllListings } from '@/app/actions/listings'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 interface Listing {
   id: string
@@ -72,16 +73,9 @@ export default function AdminListingsPage() {
     { value: 'DRAFT', label: 'Draft', color: 'bg-gray-100 text-gray-900' }
   ]
 
-  // Redirect if not admin
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'ADMIN')) {
-      router.push('/login')
-    }
-  }, [user, authLoading, router])
-
   // Fetch listings when filters or page change
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
+    if (user) {
       fetchListings()
     }
   }, [user, activeStatus, searchQuery, currentPage])
@@ -159,7 +153,7 @@ export default function AdminListingsPage() {
     })
   }
 
-  if (authLoading || (user?.role !== 'ADMIN')) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-900">Loading...</div>
@@ -168,7 +162,8 @@ export default function AdminListingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <ProtectedRoute requiredRole="ADMIN">
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -403,6 +398,6 @@ export default function AdminListingsPage() {
           </div>
         )}
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

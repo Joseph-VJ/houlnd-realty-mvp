@@ -63,18 +63,12 @@ export function Step5Photos() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Check total images (existing + new)
-    const totalImages = existingImageUrls.length + (formData.imageFiles?.length || 0)
-    if (totalImages < 3) {
-      setError('Please have at least 3 images total')
-      return
-    }
-
+    // Images are now optional - no minimum requirement
     nextStep()
   }
 
   const totalImageCount = existingImageUrls.length + (formData.imageFiles?.length || 0)
-  const isValid = totalImageCount >= 3
+  const isValid = true // Always valid since images are optional
 
   return (
     <form onSubmit={handleSubmit}>
@@ -83,7 +77,7 @@ export function Step5Photos() {
           <div>
             <h2 className="text-3xl font-black text-gray-900 mb-2">Property Photos</h2>
             <p className="text-gray-900">
-              Upload high-quality images of your property (minimum 3, maximum 10)
+              Upload high-quality images of your property (optional, maximum 10)
             </p>
           </div>
 
@@ -126,12 +120,8 @@ export function Step5Photos() {
                   </span>
                 )}
               </div>
-              <div
-                className={`text-sm font-bold ${
-                  isValid ? 'text-green-600' : 'text-orange-600'
-                }`}
-              >
-                {isValid ? '✓ Minimum requirement met' : '⚠ Need at least 3 images'}
+              <div className="text-sm font-bold text-blue-600">
+                {totalImageCount > 0 ? `✓ ${totalImageCount} image${totalImageCount === 1 ? '' : 's'} added` : 'Optional - you can skip this step'}
               </div>
             </div>
           </div>
@@ -264,10 +254,9 @@ export function Step5Photos() {
         </button>
         <button
           type="submit"
-          disabled={!isValid}
-          className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30"
         >
-          Next: Availability
+          {totalImageCount > 0 ? 'Next: Availability' : 'Skip Photos'}
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

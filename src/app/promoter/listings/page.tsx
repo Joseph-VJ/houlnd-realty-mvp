@@ -42,6 +42,7 @@ export default function MyListingsPage() {
   const [activeTab, setActiveTab] = useState<ListingStatus>('ALL')
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -69,6 +70,34 @@ export default function MyListingsPage() {
 
     fetchListings()
   }, [user, activeTab])
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (!confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      setDeletingId(listingId)
+      
+      const response = await fetch(`/api/listings/${listingId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Remove from local state
+        setListings(listings.filter(l => l.id !== listingId))
+        alert('Listing deleted successfully')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to delete listing')
+      }
+    } catch (error) {
+      console.error('Error deleting listing:', error)
+      alert('Failed to delete listing')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const tabs = [
     { key: 'ALL' as ListingStatus, label: 'All' },
@@ -222,13 +251,13 @@ export default function MyListingsPage() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Link href={`/property/${listing.id}`} className="flex-1">
                         <Button variant="outline" size="sm" className="w-full">
                           View Details
                         </Button>
                       </Link>
-                      {(listing.status === 'PENDING_VERIFICATION' || listing.status === 'REJECTED') && (
+                      {(listing.status === 'PENDING_VERIFICATION' || listing.status === 'REJECTED' || listing.status === 'DRAFT') && (
                         <Link href={`/promoter/listings/${listing.id}/edit`} className="flex-1">
                           <Button size="sm" className="w-full">
                             Edit
@@ -241,6 +270,15 @@ export default function MyListingsPage() {
                             Inquiries ({listing.unlock_count})
                           </Button>
                         </Link>
+                      )}
+                      {(listing.status === 'DRAFT' || listing.status === 'REJECTED') && (
+                        <button
+                          onClick={() => handleDeleteListing(listing.id)}
+                          disabled={deletingId === listing.id}
+                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {deletingId === listing.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       )}
                     </div>
                   </CardContent>

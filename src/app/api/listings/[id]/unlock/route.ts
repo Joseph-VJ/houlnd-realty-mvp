@@ -53,23 +53,35 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // DEV-only shortcut: create unlock record without payment gateway.
   // SECURITY: auth.user.id is now verified via JWT, not trusted from client header
-  const unlock = await prisma.unlock.upsert({
+  
+  // Check if unlock already exists
+  const existingUnlock = await prisma.unlock.findUnique({
     where: { userId_listingId: { userId: auth.user.id, listingId } },
-    create: {
-      userId: auth.user.id,
-      listingId,
-      paymentProvider: "DEV",
-      paymentRef: `dev_${Date.now()}`,
-    },
-    update: {},
-    select: { id: true, userId: true, listingId: true },
   });
 
-  // Increment unlock count for analytics
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { unlockCount: { increment: 1 } },
-  });
+  let unlock;
+  if (existingUnlock) {
+    unlock = existingUnlock;
+  } else {
+    // Create new unlock with explicit ID generation
+    const { randomUUID } = await import('crypto');
+    unlock = await prisma.unlock.create({
+      data: {
+        id: randomUUID(),
+        userId: auth.user.id,
+        listingId,
+        paymentProvider: "DEV",
+        paymentRef: `dev_${Date.now()}`,
+      },
+      select: { id: true, userId: true, listingId: true },
+    });
+
+    // Increment unlock count for analytics (only for new unlocks)
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { unlockCount: { increment: 1 } },
+    });
+  }
 
   return Response.json({ unlock });
 }

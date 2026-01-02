@@ -70,7 +70,13 @@ export default function CustomerDashboard() {
   }
 
   const handleLogout = async () => {
-    await signOut()
+    try {
+      await signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      router.push('/login')
+    }
   }
 
   return (

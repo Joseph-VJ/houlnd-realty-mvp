@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -41,6 +42,7 @@ interface RecentUnlock {
 export default function PromoterDashboard() {
   const { user } = useAuth()
   const { profile } = useUserProfile(user?.id)
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentUnlocks, setRecentUnlocks] = useState<RecentUnlock[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,7 +82,13 @@ export default function PromoterDashboard() {
   }, [user])
 
   const handleLogout = async () => {
-    await signOut()
+    try {
+      await signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      router.push('/login')
+    }
   }
 
   return (

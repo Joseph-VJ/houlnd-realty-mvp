@@ -1,41 +1,78 @@
-**Customer (Buyer) account**
+General Navigation (Guest)
 
-* The buyer dashboard loads with search filters and summary cards, but the **Logout** button is non‑functional; clicking it does nothing and manually visiting `/logout` returns a **404** page.
-* The **Saved Properties** feature doesn’t persist; clicking the heart icon on property cards or in the property details page marks it as saved, but the “Saved properties” page always reports **“No saved properties yet”**.
-* Unlocking seller contact details fails. When you click “View Seller Contact (FREE)”, an error appears: **“null value in column 'id' of relation 'unlocks' violates not‑null constraint”** and the phone number stays hidden.
-* Appointment scheduling is not implemented; the “My Appointments” page always shows “No appointments yet”.
-* Filtering by price/ city works and property cards display correct information, but there is no search by keywords.
-* Navigation links sometimes misroute; there is no way to sign out other than clearing browser data.
+Home page: Displays clear calls to action (“I Want to Buy”, “I Want to Sell”) and a button to browse properties without signup. Buttons work and lead to the search page.
 
-**Promoter (Seller) account**
+Property search: Filters for price per sq. ft., city, property type, bedrooms and total price worked; results update accordingly. Sorting options (“Newest First”, price ascending/descending) function correctly
+houlnd-realty-mvp.vercel.app
+.
 
-* The promoter dashboard shows 0 listings/earnings and provides links to **Post Property** and **Manage Listings**.
-* Starting a new property listing is a multi‑step wizard (basic details, location, details, amenities, photos, availability, agreement, review). Steps 1‑4 work correctly; price per sq.ft is calculated automatically.
-* Step 5 requires uploading at least 3 images. Uploading images from the local file system works, but when submitting the final listing, the site returns **“Submission Failed: Failed to upload image 1: Bucket not found”** after clicking **Submit Listing for Review**. The listing is not created.
-* Because the listing cannot be submitted, the promoter cannot have any “Pending verification” or “Live listings” to manage. The “My Listings” page incorrectly shows existing listings (from other users) even when the promoter’s stats are zero.
-* The promoter also cannot schedule availability (Step 6) – it’s labelled “Appointment scheduling coming soon”.
-* Clicking the **Cancel** button in the listing wizard returns to the dashboard but doesn’t clear the partially entered data.
+Property details: Clicking a card opens a detailed page with large images, price/area stats, description and masked seller contact info. As a guest, clicking “View Seller Contact (FREE)” redirects to the login page, which is expected.
 
-**Admin account**
+Footers: The Contact link works and displays email, phone number, business inquiries contact and head‑office address. However the About, Terms and Privacy links all return 404 pages, so those legal/informational pages are missing.
 
-* Logging in as admin via either buyer or seller login opens an **Admin Portal** with a dashboard summarizing platform metrics (platform users, active customers, promoters, total earnings, pending review, live listings, total unlocks). All metrics display **0** even though customer and promoter accounts exist.
-* The **Pending** section opens `/admin/pending-listings` and shows “No pending listings” because the promoter listing couldn’t be submitted.
-* **User management** (`/admin/users`) loads but the table is empty (total 0 users), even though there are three test accounts. This suggests the admin service is not fetching user data.
-* Clicking the **Listings** tab logs the admin out and redirects back to the generic login page, suggesting a routing bug or missing route for `/admin/listings`.
-* The **Logout** button in the admin navbar logs out correctly.
+Customer Role
 
-### Recommended code changes & bug fixes
+Login: Using customer@test.com / Customer123! successfully logs in.
 
-| Area                         | Issue                                                                                                       | Suggested Fix                                                                                                                                                                          |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Authentication & Routing** | • Logout button on buyer dashboard doesn’t work (no endpoint).  • Admin `Listings` tab logs the user out.   | Implement a functional `/logout` route that clears session/local‑storage and redirects to `/login`. Ensure admin routes (`/admin/listings`) exist and don’t trigger logout.            |
-| **Property saving**          | Saved properties are not persisted; hearts turn red but the Saved page always shows zero.                   | Fix save/un-save logic: ensure clicking the heart triggers an API call to create/delete a “saved” record keyed by user and property; refresh local state after the API response.       |
-| **Unlock contact details**   | Viewing seller contact throws a database error due to null `id` in `unlocks` table.                         | Ensure that unlocking contact inserts a valid record with non‑null IDs (user ID, property ID) before returning the phone number. Handle transactions and show success message.         |
-| **Appointments**             | Appointment scheduling not implemented on buyer or promoter side.                                           | Hide or disable appointment sections until ready or implement basic scheduling (create appointment table, allow promoter to set slots and buyer to book).                              |
-| **Posting listings**         | Submitting a property listing fails with **Bucket not found** during image upload.                          | Configure a valid storage bucket (e.g., AWS S3) and environment variables for image uploads. Validate image upload before final submission and return friendly errors if upload fails. |
-| **Promoter listings page**   | “My Listings” shows global listings instead of only the promoter’s listings.                                | Filter listings by the logged‑in promoter’s ID when rendering the page.                                                                                                                |
-| **Admin metrics**            | Dashboard always shows zero counts; user list is empty.                                                     | Update admin endpoints to fetch actual counts of users, promoters, buyers, properties, unlocks. Ensure the admin API returns data.                                                     |
-| **General UX**               | Missing error handling leads to blank pages or silent failures (e.g., failing to save, failing to log out). | Add try/catch around API calls, display user‑friendly error messages, and keep the user on the same page.                                                                              |
-| **Responsive design**        | Some pages require manual scroll; call‑to‑action buttons sometimes hidden below fold.                       | Add anchor links or auto‑scroll to next step; ensure forms auto‑scroll to top on validation errors.                                                                                    |
+Dashboard: Shows quick search fields and cards for saved properties, unlocked contacts and upcoming visits.
 
-By addressing these bugs and improvements, the platform will support the full workflow for all three roles and provide a smoother user experience.
+Saving properties: Clicking the heart icon on a property page turns it red, but the saved count in the dashboard does not increase and the Saved Properties page remains empty
+houlnd-realty-mvp.vercel.app
+. Saving from search results doesn’t work either.
+
+Unlocking contacts: Attempting to reveal a seller’s contact as a logged‑in customer triggers a backend error (null value in column "id" of relation "unlocks" violates not‑null constraint)
+houlnd-realty-mvp.vercel.app
+, so contact unlocking is broken.
+
+Appointments page: Shows Upcoming/Past tabs and a message that no appointments are scheduled
+houlnd-realty-mvp.vercel.app
+. Navigation to a property from there works.
+
+Logout: The Logout link in the header does not log the user out; the page remains on the dashboard. To switch roles, I had to manually open the home page or clear the session.
+
+Promoter Role
+
+Login: promoter@test.com / Promoter123! logs in successfully.
+
+Dashboard: Displays cards for total listings, pending verification, live listings, total unlocks and upcoming visits. All values remain at zero despite there being listings, indicating the metrics are static.
+
+Property posting wizard: Multi‑step wizard (Basic Details, Location, Property Details, Amenities, Photos). Steps 1‑4 accept input; however Step 5 requires at least three images and the Next button stays disabled without them
+houlnd-realty-mvp.vercel.app
+. There is no way to skip the image upload, which blocks testing end‑to‑end property creation.
+
+My Listings: Shows several sample listings with stats and a View Details button that opens the public property view with share and heart icons. There is no edit or delete option for promoters to manage their listings. The share icon only copies the link
+houlnd-realty-mvp.vercel.app
+.
+
+Appointment Requests: The promoter appointments page shows “No Appointments Yet” with a link to view listings
+houlnd-realty-mvp.vercel.app
+. There is no way to manage or accept appointments.
+
+Logout: As with the customer, the promoter’s Logout link does not end the session.
+
+Admin Role
+
+Login: Admin credentials (admin@test.com / Admin123!) log in via the buyer login form. The Admin Dashboard loads automatically.
+
+Dashboard: Displays platform metrics (users, customers, promoters, earnings, pending review listings, live listings and total unlocks) but all counters remain at zero. Buttons lead to relevant pages.
+
+Pending Listings: Shows an empty state (“All caught up!”) when there are no listings pending review.
+
+Listings page: Clicking Listings in the nav redirects to the login page, effectively logging the admin out. The admin cannot view or manage existing listings—this is a critical bug.
+
+User Management: Lists all users (customer, promoter, admin) with name, email, phone, role and join date; you can open a modal with user details. There is no ability to edit or deactivate users
+houlnd-realty-mvp.vercel.app
+.
+
+Logout: The Logout button is present but does nothing; the admin remains logged in.
+
+
+Broken Save/Bookmark function – saved properties don’t persist or update.
+
+Logout doesn’t work for any role; manual navigation is required to exit.
+
+Admin Listings page breaks the session by redirecting to login; admin can’t review listings.
+
+Promoter management features missing: cannot edit or delete own listings; dashboard metrics inaccurate.
+
+No editing of user accounts in admin panel; only viewing details is possible.

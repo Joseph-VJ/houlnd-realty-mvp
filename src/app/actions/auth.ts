@@ -237,7 +237,7 @@ export async function signOut(): Promise<ActionResponse> {
       cookieStore.delete('offline_token')
       
       revalidatePath('/', 'layout')
-      redirect('/login')
+      return { success: true }
     }
 
     // ONLINE MODE: Use Supabase
@@ -250,7 +250,7 @@ export async function signOut(): Promise<ActionResponse> {
     }
 
     revalidatePath('/', 'layout')
-    redirect('/login')
+    return { success: true }
   } catch (error) {
     console.error('Sign out error:', error)
     return {
