@@ -17,7 +17,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge, getListingStatusBadge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { getPromoterListings } from '@/app/actions/listings'
 
 type ListingStatus = 'ALL' | 'PENDING_VERIFICATION' | 'LIVE' | 'REJECTED'
 
@@ -42,7 +42,6 @@ export default function MyListingsPage() {
   const [activeTab, setActiveTab] = useState<ListingStatus>('ALL')
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
@@ -51,22 +50,18 @@ export default function MyListingsPage() {
       try {
         setLoading(true)
 
-        let query = supabase
-          .from('listings')
-          .select('*')
-          .eq('promoter_id', user.id)
-          .order('created_at', { ascending: false })
+        const result = await getPromoterListings()
 
-        // Filter by status if not "ALL"
-        if (activeTab !== 'ALL') {
-          query = query.eq('status', activeTab)
+        if (result.success && result.data) {
+          let data = result.data as any[]
+          
+          // Filter by status if not "ALL"
+          if (activeTab !== 'ALL') {
+            data = data.filter(l => l.status === activeTab)
+          }
+
+          setListings(data)
         }
-
-        const { data, error } = await query
-
-        if (error) throw error
-
-        setListings(data || [])
       } catch (error) {
         console.error('Error fetching listings:', error)
       } finally {
@@ -75,7 +70,7 @@ export default function MyListingsPage() {
     }
 
     fetchListings()
-  }, [user, activeTab, supabase])
+  }, [user, activeTab])
 
   const tabs = [
     { key: 'ALL' as ListingStatus, label: 'All' },
@@ -88,13 +83,13 @@ export default function MyListingsPage() {
     <ProtectedRoute requiredRole="PROMOTER">
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <header className="bg-white border-b">
+        <header className="bg-white border-b shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2">
                   <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-                  <div className="text-sm text-gray-500">Realty</div>
+                  <div className="text-sm text-gray-500 font-medium">Realty</div>
                 </Link>
               </div>
               <div className="flex items-center gap-4">

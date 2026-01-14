@@ -19,7 +19,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { getPendingListings, approveListing, rejectListing } from '@/app/actions/admin'
 
 interface PendingListing {
   id: string
@@ -51,7 +51,6 @@ export default function AdminPendingListingsPage() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectListingId, setRejectListingId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
@@ -62,22 +61,13 @@ export default function AdminPendingListingsPage() {
     try {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('listings')
-        .select(`
-          *,
-          promoter:users!promoter_id (
-            full_name,
-            email,
-            phone_e164
-          )
-        `)
-        .eq('status', 'PENDING_VERIFICATION')
-        .order('created_at', { ascending: false })
+      const result = await getPendingListings()
 
-      if (error) throw error
-
-      setListings(data || [])
+      if (result.success && result.data) {
+        setListings(result.data as any[])
+      } else {
+        console.error('Error fetching pending listings:', result.error)
+      }
     } catch (error) {
       console.error('Error fetching pending listings:', error)
     } finally {
@@ -89,13 +79,9 @@ export default function AdminPendingListingsPage() {
     try {
       setProcessingId(listingId)
 
-      // Call approve RPC function
-      const { error } = await supabase.rpc('approve_listing', {
-        p_listing_id: listingId,
-        p_admin_id: user!.id,
-      })
+      const result = await approveListing(listingId)
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error)
 
       // Remove from list
       setListings((prev) => prev.filter((l) => l.id !== listingId))
@@ -121,14 +107,9 @@ export default function AdminPendingListingsPage() {
     try {
       setProcessingId(rejectListingId)
 
-      // Call reject RPC function
-      const { error } = await supabase.rpc('reject_listing', {
-        p_listing_id: rejectListingId,
-        p_admin_id: user!.id,
-        p_rejection_reason: rejectionReason.trim(),
-      })
+      const result = await rejectListing(rejectListingId, rejectionReason.trim())
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error)
 
       // Remove from list
       setListings((prev) => prev.filter((l) => l.id !== rejectListingId))

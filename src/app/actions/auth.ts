@@ -20,12 +20,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { offlineSignUp, offlineSignIn, offlineSignOut, offlineGetUser } from '@/lib/offlineAuth'
+import { cookies } from 'next/headers'
 
 interface ActionResponse<T = unknown> {
   success: boolean
   error?: string
   data?: T
 }
+
+// Check if offline mode is enabled
+const isOfflineMode = process.env.USE_OFFLINE === 'true'
 
 /**
  * Sign up a new user with email/password
@@ -48,6 +53,34 @@ export async function signUp(
   phone?: string
 ): Promise<ActionResponse<{ userId: string }>> {
   try {
+    // OFFLINE MODE: Use SQLite and JWT
+    if (isOfflineMode) {
+      const result = await offlineSignUp(email, password, fullName, role)
+      
+      if (result.error) {
+        return { success: false, error: result.error.message }
+      }
+
+      if (result.data) {
+        // Set cookie for offline auth
+        const cookieStore = await cookies()
+        cookieStore.set('offline_token', result.data.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7 // 7 days
+        })
+
+        return {
+          success: true,
+          data: { userId: result.data.user.id }
+        }
+      }
+
+      return { success: false, error: 'Failed to create user' }
+    }
+
+    // ONLINE MODE: Use Supabase
     const supabase = await createClient()
 
     // Create auth user
@@ -77,7 +110,7 @@ export async function signUp(
       phone_e164: phone || null,
       full_name: fullName,
       role,
-    })
+    } as any)
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
@@ -111,6 +144,39 @@ export async function signIn(
   password: string
 ): Promise<ActionResponse<{ userId: string; role: string }>> {
   try {
+    // OFFLINE MODE: Use SQLite and JWT
+    if (isOfflineMode) {
+      const result = await offlineSignIn(email, password)
+      
+      if (result.error) {
+        return { success: false, error: result.error.message }
+      }
+
+      if (result.data) {
+        // Set cookie for offline auth
+        const cookieStore = await cookies()
+        cookieStore.set('offline_token', result.data.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7 // 7 days
+        })
+
+        revalidatePath('/', 'layout')
+
+        return {
+          success: true,
+          data: {
+            userId: result.data.user.id,
+            role: result.data.user.role
+          }
+        }
+      }
+
+      return { success: false, error: 'Login failed' }
+    }
+
+    // ONLINE MODE: Use Supabase
     const supabase = await createClient()
 
     const { data: authData, error: signInError } =
@@ -148,7 +214,7 @@ export async function signIn(
       success: true,
       data: {
         userId: authData.user.id,
-        role: profile.role,
+        role: (profile as any).role,
       },
     }
   } catch (error) {
@@ -165,6 +231,16 @@ export async function signIn(
  */
 export async function signOut(): Promise<ActionResponse> {
   try {
+    // OFFLINE MODE: Clear cookie
+    if (isOfflineMode) {
+      const cookieStore = await cookies()
+      cookieStore.delete('offline_token')
+      
+      revalidatePath('/', 'layout')
+      redirect('/login')
+    }
+
+    // ONLINE MODE: Use Supabase
     const supabase = await createClient()
 
     const { error } = await supabase.auth.signOut()
@@ -274,6 +350,50 @@ export async function getCurrentUserProfile(): Promise<
   }>
 > {
   try {
+    // OFFLINE MODE: Get user from JWT token
+    if (isOfflineMode) {
+      const cookieStore = await cookies()
+      const token = cookieStore.get('offline_token')?.value
+
+      if (!token) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      const result = await offlineGetUser(token)
+
+      if (!result.data.user) {
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      // Get full user profile from Prisma
+      const { PrismaClient } = require('@prisma/client')
+      const prisma = new PrismaClient()
+
+      try {
+        const profile = await prisma.user.findUnique({
+          where: { id: result.data.user.id }
+        })
+
+        if (!profile) {
+          return { success: false, error: 'Profile not found' }
+        }
+
+        return {
+          success: true,
+          data: {
+            id: profile.id,
+            email: profile.email,
+            phone_e164: profile.phoneE164,
+            full_name: profile.fullName,
+            role: profile.role as 'CUSTOMER' | 'PROMOTER' | 'ADMIN'
+          }
+        }
+      } finally {
+        await prisma.$disconnect()
+      }
+    }
+
+    // ONLINE MODE: Use Supabase
     const supabase = await createClient()
 
     const {

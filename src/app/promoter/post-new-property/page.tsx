@@ -53,32 +53,40 @@ export default function PostNewPropertyPage() {
     <ProtectedRoute requiredRole="PROMOTER">
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <header className="bg-white border-b sticky top-0 z-10">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="text-2xl font-bold text-blue-600">Houlnd</div>
-                <div className="text-sm text-gray-500">Realty</div>
+              <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white rounded-sm transform rotate-45"></div>
+                </div>
+                <span className="text-xl font-bold text-gray-900">Houlnd Realty</span>
               </Link>
-              <div className="flex items-center gap-4">
-                <Link href="/promoter/dashboard">
-                  <Button variant="ghost" size="sm">
-                    Cancel
-                  </Button>
-                </Link>
-              </div>
+              <Link href="/promoter/dashboard">
+                <button className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-all">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span className="font-medium">Cancel</span>
+                </button>
+              </Link>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           {/* Progress Indicator */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-900">Post New Property</h1>
-              <div className="text-sm text-gray-600">
-                Step {currentStep} of {STEPS.length}
+          <div className="mb-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-2">Post New Property</h1>
+                <p className="text-lg text-gray-600">List your property and connect with verified buyers</p>
+              </div>
+              <div className="mt-3 md:mt-0">
+                <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">
+                  Step {currentStep} of {STEPS.length}
+                </span>
               </div>
             </div>
 
@@ -95,11 +103,11 @@ export default function PostNewPropertyPage() {
                       }
                     }}
                     disabled={step.number > currentStep}
-                    className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition ${
+                    className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all shadow-sm ${
                       step.number === currentStep
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-white scale-110'
                         : step.number < currentStep
-                          ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                          ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer hover:scale-105'
                           : 'bg-gray-200 text-gray-500'
                     }`}
                   >
@@ -109,7 +117,7 @@ export default function PostNewPropertyPage() {
                   {/* Connector Line */}
                   {index < STEPS.length - 1 && (
                     <div
-                      className={`flex-1 h-1 mx-2 transition ${
+                      className={`flex-1 h-1.5 mx-2 rounded-full transition-all ${
                         step.number < currentStep ? 'bg-green-600' : 'bg-gray-200'
                       }`}
                     />
@@ -120,33 +128,33 @@ export default function PostNewPropertyPage() {
 
             {/* Mobile Step Indicator */}
             <div className="md:hidden">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-medium text-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-bold text-gray-900">
                   {STEPS[currentStep - 1].title}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600 font-medium">
                   {currentStep}/{STEPS.length}
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Step Title (Desktop) */}
-            <div className="hidden md:flex justify-between mt-2">
+            <div className="hidden md:flex justify-between mt-3">
               {STEPS.map((step) => (
                 <div
                   key={step.number}
-                  className={`text-xs flex-1 text-center ${
+                  className={`text-xs flex-1 text-center transition-all ${
                     step.number === currentStep
-                      ? 'text-blue-600 font-medium'
+                      ? 'text-blue-600 font-bold'
                       : step.number < currentStep
-                        ? 'text-green-600'
-                        : 'text-gray-500'
+                        ? 'text-green-600 font-semibold'
+                        : 'text-gray-500 font-medium'
                   }`}
                 >
                   {step.title}

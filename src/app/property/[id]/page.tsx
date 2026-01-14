@@ -16,7 +16,7 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,7 +24,14 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { getListingById } from '@/app/actions/listings'
+import { getListingContact, unlockContact } from '@/app/actions/contact'
+import {
+  checkIfSaved as checkIfListingSaved,
+  saveListing,
+  unsaveListing,
+} from '@/app/actions/savedProperties'
+import ScheduleVisitModal from '@/components/appointments/ScheduleVisitModal'
 
 interface Listing {
   id: string
@@ -90,11 +97,13 @@ async function loadRazorpayScript(): Promise<boolean> {
   })
 }
 
-export default function PropertyDetailsPage({ params }: { params: { id: string } }) {
+export default function PropertyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap params Promise using React.use()
+  const { id: listingId } = use(params)
+
   const router = useRouter()
   const { user } = useAuth()
   const { profile } = useUserProfile(user?.id)
-  const supabase = createClient()
 
   const [listing, setListing] = useState<Listing | null>(null)
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null)
@@ -103,8 +112,9 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
   const [unlocking, setUnlocking] = useState(false)
   const [error, setError] = useState('')
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
 
-  const listingId = params.id
+  const isOfflineMode = process.env.NEXT_PUBLIC_USE_OFFLINE === 'true'
 
   useEffect(() => {
     fetchListing()
@@ -118,18 +128,14 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
     try {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('id', listingId)
-        .single()
+      const result = await getListingById(listingId)
 
-      if (error) throw error
-
-      if (!data) {
-        setError('Property not found')
+      if (!result.success || !result.data) {
+        setError(result.error || 'Property not found')
         return
       }
+
+      const data = result.data
 
       // Only show LIVE listings to customers, or show own listings to promoters
       if (data.status !== 'LIVE' && (!user || data.promoter_id !== user.id)) {
@@ -137,7 +143,7 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
         return
       }
 
-      setListing(data)
+      setListing(data as any)
     } catch (error) {
       console.error('Error fetching listing:', error)
       setError('Failed to load property details')
@@ -148,24 +154,11 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
 
   const fetchContactInfo = async () => {
     try {
-      if (!user) {
-        // Not logged in, show masked contact
-        setContactInfo({
-          unlocked: false,
-          masked_phone: '+91******00',
-        })
-        return
+      const result = await getListingContact(listingId)
+
+      if (result.success && result.data) {
+        setContactInfo(result.data)
       }
-
-      // Call RPC function to get contact info based on unlock status
-      const { data, error } = await supabase.rpc('get_listing_contact', {
-        p_listing_id: listingId,
-        p_user_id: user.id,
-      })
-
-      if (error) throw error
-
-      setContactInfo(data as ContactInfo)
     } catch (error) {
       console.error('Error fetching contact info:', error)
     }
@@ -175,16 +168,11 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
     try {
       if (!user) return
 
-      const { data, error } = await supabase
-        .from('saved_properties')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('listing_id', listingId)
-        .single()
+      const result = await checkIfListingSaved(listingId)
 
-      if (error && error.code !== 'PGRST116') throw error
-
-      setIsSaved(!!data)
+      if (result.success) {
+        setIsSaved(result.isSaved || false)
+      }
     } catch (error) {
       console.error('Error checking saved status:', error)
     }
@@ -200,25 +188,12 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
     setIsSaved(!isSaved)
 
     try {
-      if (isSaved) {
-        // Unsave
-        const { error } = await supabase
-          .from('saved_properties')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('listing_id', listingId)
+      const result = isSaved
+        ? await unsaveListing(listingId)
+        : await saveListing(listingId)
 
-        if (error) throw error
-      } else {
-        // Save
-        const { error } = await supabase
-          .from('saved_properties')
-          .insert({
-            user_id: user.id,
-            listing_id: listingId,
-          })
-
-        if (error) throw error
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to toggle save')
       }
     } catch (error) {
       console.error('Error toggling save:', error)
@@ -237,75 +212,16 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
       setUnlocking(true)
       setError('')
 
-      // Create Razorpay order
-      const orderRes = await fetch('/api/payments/razorpay/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listingId }),
-      })
+      // ALWAYS FREE: Unlock contact to generate leads for sellers
+      const result = await unlockContact(listingId)
 
-      if (!orderRes.ok) {
-        const errorData = await orderRes.json()
-        throw new Error(errorData.error || 'Failed to create order')
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to unlock contact')
       }
 
-      const orderData = await orderRes.json()
-
-      if (orderData.alreadyUnlocked) {
-        await fetchContactInfo()
-        return
-      }
-
-      if (!orderData.keyId || !orderData.orderId) {
-        throw new Error('Invalid order data')
-      }
-
-      // Load Razorpay script
-      const scriptLoaded = await loadRazorpayScript()
-      if (!scriptLoaded || !window.Razorpay) {
-        throw new Error('Failed to load Razorpay')
-      }
-
-      // Open Razorpay checkout
-      const options: RazorpayOptions = {
-        key: orderData.keyId,
-        amount: orderData.amountPaise,
-        currency: orderData.currency || 'INR',
-        name: 'Houlnd Realty',
-        description: 'Unlock seller contact details',
-        order_id: orderData.orderId,
-        handler: async (response: RazorpayResponse) => {
-          try {
-            // Verify payment
-            const verifyRes = await fetch('/api/payments/razorpay/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ...response,
-                listingId,
-              }),
-            })
-
-            if (!verifyRes.ok) {
-              const errorData = await verifyRes.json()
-              throw new Error(errorData.error || 'Payment verification failed')
-            }
-
-            // Refresh contact info
-            await fetchContactInfo()
-          } catch (error) {
-            console.error('Payment verification error:', error)
-            setError(error instanceof Error ? error.message : 'Payment verification failed')
-          } finally {
-            setUnlocking(false)
-          }
-        },
-        prefill: {},
-        notes: { listingId },
-      }
-
-      const razorpay = new window.Razorpay(options)
-      razorpay.open()
+      // Successfully unlocked, refresh contact info
+      await fetchContactInfo()
+      setUnlocking(false)
     } catch (error) {
       console.error('Error unlocking contact:', error)
       setError(error instanceof Error ? error.message : 'Failed to unlock contact')
@@ -526,13 +442,13 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
                 {/* Price Badges */}
                 <div className="flex flex-wrap gap-4 mb-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                    <div className="text-sm text-gray-600">Total Price</div>
+                    <div className="text-sm text-gray-800">Total Price</div>
                     <div className="text-2xl font-bold text-gray-900">
                       ₹{listing.total_price.toLocaleString('en-IN')}
                     </div>
                   </div>
                   <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-                    <div className="text-sm text-gray-600">Price per sq.ft</div>
+                    <div className="text-sm text-gray-800">Price per sq.ft</div>
                     <div className="text-2xl font-bold text-green-600">
                       ₹{Math.round(listing.price_per_sqft).toLocaleString('en-IN')}
                     </div>
@@ -547,14 +463,14 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
                 {/* Property Info Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <div className="text-sm text-gray-600">Area</div>
+                    <div className="text-sm text-gray-700">Area</div>
                     <div className="text-lg font-semibold text-gray-900">
                       {listing.total_sqft.toLocaleString('en-IN')} sq.ft
                     </div>
                   </div>
                   {listing.bedrooms !== null && (
                     <div>
-                      <div className="text-sm text-gray-600">Bedrooms</div>
+                      <div className="text-sm text-gray-700">Bedrooms</div>
                       <div className="text-lg font-semibold text-gray-900">
                         {listing.bedrooms} BHK
                       </div>
@@ -562,14 +478,14 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
                   )}
                   {listing.bathrooms !== null && (
                     <div>
-                      <div className="text-sm text-gray-600">Bathrooms</div>
+                      <div className="text-sm text-gray-700">Bathrooms</div>
                       <div className="text-lg font-semibold text-gray-900">
                         {listing.bathrooms}
                       </div>
                     </div>
                   )}
                   <div>
-                    <div className="text-sm text-gray-600">Price Type</div>
+                    <div className="text-sm text-gray-700">Price Type</div>
                     <div className="text-lg font-semibold text-gray-900">
                       {listing.price_type}
                     </div>
@@ -634,18 +550,23 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
                       📞 Call Now
                     </Button>
 
-                    <Button variant="outline" className="w-full" size="lg">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                      onClick={() => setShowScheduleModal(true)}
+                    >
                       📅 Schedule Visit
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                      <div className="text-sm text-gray-600 mb-1">Seller Phone</div>
-                      <div className="text-xl font-semibold text-gray-400">
+                      <div className="text-sm text-gray-700 mb-1">Seller Phone</div>
+                      <div className="text-xl font-semibold text-gray-700">
                         {contactInfo?.masked_phone || '+91******00'}
                       </div>
-                      <div className="text-xs text-gray-500 mt-2">
+                      <div className="text-xs text-gray-600 mt-2">
                         Contact details are hidden
                       </div>
                     </div>
@@ -663,11 +584,11 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
                       isLoading={unlocking}
                       disabled={unlocking}
                     >
-                      🔓 Unlock Contact for ₹99
+                      🔓 View Seller Contact (FREE)
                     </Button>
 
                     <div className="text-xs text-gray-500 text-center">
-                      One-time payment to view seller contact details
+                      100% Free - No charges to connect with sellers
                     </div>
                   </div>
                 )}
@@ -688,6 +609,22 @@ export default function PropertyDetailsPage({ params }: { params: { id: string }
           </div>
         </div>
       </main>
+
+      {/* Schedule Visit Modal */}
+      {showScheduleModal && listing && (
+        <ScheduleVisitModal
+          listingId={listing.id}
+          listingTitle={
+            listing.description?.split('\n')[0] ||
+            `${listing.bedrooms || 0} BHK ${listing.property_type} in ${listing.locality || listing.city}`
+          }
+          onClose={() => setShowScheduleModal(false)}
+          onSuccess={() => {
+            // Optionally show a success message or redirect
+            alert('Visit scheduled successfully! Check your appointments page.')
+          }}
+        />
+      )}
     </div>
   )
 }
