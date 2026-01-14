@@ -18,7 +18,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { createClient } from '@/lib/supabase/client'
+import { getUsers } from '@/app/actions/admin'
 
 interface User {
   id: string
@@ -39,7 +39,6 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
@@ -73,15 +72,12 @@ export default function AdminUsersPage() {
     try {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const result = await getUsers()
 
-      if (error) throw error
-
-      setUsers(data || [])
-      setFilteredUsers(data || [])
+      if (result.success && result.data) {
+        setUsers(result.data as any[])
+        setFilteredUsers(result.data as any[])
+      }
     } catch (error) {
       console.error('Error fetching users:', error)
     } finally {

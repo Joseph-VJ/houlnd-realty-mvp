@@ -47,6 +47,9 @@ export function ProtectedRoute({
   const router = useRouter()
   const pathname = usePathname()
 
+  // Check if profile matches the current user
+  const profileMatchesUser = profile && user && profile.id === user.id
+
   useEffect(() => {
     // Wait for auth to load
     if (authLoading) return
@@ -59,10 +62,10 @@ export function ProtectedRoute({
       return
     }
 
-    // If role check is required, wait for profile to load
-    if (requiredRole && !profileLoading) {
+    // If role check is required, wait for profile to load AND match the user
+    if (requiredRole && user && !profileLoading && profileMatchesUser) {
       // Check if user has required role
-      if (!profile || profile.role !== requiredRole) {
+      if (profile.role !== requiredRole) {
         router.push('/unauthorized')
       }
     }
@@ -71,14 +74,16 @@ export function ProtectedRoute({
     authLoading,
     profile,
     profileLoading,
+    profileMatchesUser,
     requiredRole,
     router,
     pathname,
     redirectTo,
   ])
 
-  // Show loading state
-  if (authLoading || (requiredRole && profileLoading)) {
+  // Show loading state while auth or profile is loading
+  // Also show loading if we have a user but profile doesn't match yet (still fetching)
+  if (authLoading || (requiredRole && (profileLoading || (user && !profileMatchesUser)))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -94,8 +99,8 @@ export function ProtectedRoute({
     return null
   }
 
-  // Don't render children if role check fails
-  if (requiredRole && (!profile || profile.role !== requiredRole)) {
+  // Don't render children if role check fails (only check if profile matches user)
+  if (requiredRole && profileMatchesUser && profile.role !== requiredRole) {
     return null
   }
 

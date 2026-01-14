@@ -6,20 +6,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String?   @unique
-  phone_e164 String?
-  full_name String?
-  role      Role     @default(CUSTOMER)
-  createdAt DateTime @default(now()) @map("created_at")
-  listings  Listing[]
-  unlocks   Unlock[]
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  phoneE164    String?  @map("phone_e164")
+  fullName     String?  @map("full_name")
+  passwordHash String?  @map("password_hash")
+  isVerified   Boolean  @default(false) @map("is_verified")
+  role         String   @default("CUSTOMER")
+  createdAt    DateTime @default(now()) @map("created_at")
+  listings     Listing[]
+  unlocks      Unlock[]
   savedProperties SavedProperty[]
   notifications Notification[]
   appointmentsAsCustomer Appointment[] @relation("CustomerAppointments")
@@ -31,15 +32,15 @@ model User {
 
 model Listing {
   id                  String             @id @default(uuid())
-  status              ListingStatus      @default(DRAFT)
-  propertyType        PropertyType       @map("property_type")
+  status              String             @default("DRAFT")
+  propertyType        String             @map("property_type")
   totalPrice          Float              @map("total_price")
   totalSqft           Float              @map("total_sqft")
-  priceType           PriceType          @map("price_type")
+  priceType           String             @map("price_type")
   createdAt           DateTime           @default(now()) @map("created_at")
   promoterId          String             @map("promoter_id")
   promoter            User               @relation(fields: [promoterId], references: [id])
-  amenitiesJson       Json?              @map("amenities_json")
+  amenitiesJson       String?            @map("amenities_json")
   amenitiesPrice      Float?             @map("amenities_price")
   agreementAcceptance AgreementAcceptance?
   unlocks             Unlock[]
@@ -64,7 +65,7 @@ model Listing {
   ageYears            Int?               @map("age_years")
   facing              String?
   parkingCount        Int?               @map("parking_count")
-  imageUrls           String[]           @map("image_urls")
+  imageUrls           String             @default("[]") @map("image_urls")
   viewCount           Int                @default(0) @map("view_count")
   saveCount           Int                @default(0) @map("save_count")
   unlockCount         Int                @default(0) @map("unlock_count")
@@ -105,8 +106,8 @@ model PaymentOrder {
   id                String   @id @default(uuid())
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
-  provider          PaymentProvider
-  status            PaymentStatus
+  provider          String
+  status            String
   userId            String   @map("user_id")
   user              User     @relation(fields: [userId], references: [id])
   listingId         String   @map("listing_id")
@@ -132,6 +133,7 @@ model SavedProperty {
   listing   Listing  @relation(fields: [listingId], references: [id])
   savedPrice Float?  @map("saved_price")
 
+  @@unique([userId, listingId])
   @@map("saved_properties")
 }
 
@@ -147,7 +149,7 @@ model Appointment {
   promoter          User     @relation("PromoterAppointments", fields: [promoterId], references: [id])
   scheduledStart    DateTime @map("scheduled_start")
   scheduledEnd      DateTime @map("scheduled_end")
-  status            AppointmentStatus @default(PENDING)
+  status            String   @default("PENDING")
   customerNotes     String?  @map("customer_notes")
   promoterNotes     String?  @map("promoter_notes")
   cancelledAt       DateTime? @map("cancelled_at")
@@ -168,7 +170,7 @@ model Notification {
   isRead    Boolean  @default(false) @map("is_read")
   readAt    DateTime? @map("read_at")
   linkUrl   String?  @map("link_url")
-  metadata  Json?
+  metadata  String?
 
   @@map("notifications")
 }
@@ -180,59 +182,7 @@ model ActivityLog {
   action     String
   entityType String?  @map("entity_type")
   entityId   String?  @map("entity_id")
-  details    Json?
+  details    String?
 
   @@map("activity_logs")
-}
-
-enum Role {
-  CUSTOMER
-  PROMOTER
-  ADMIN
-}
-
-enum ListingStatus {
-  LIVE
-  DRAFT
-  REJECTED
-  SOLD
-  PENDING_VERIFICATION
-  INACTIVE
-}
-
-enum PropertyType {
-  PLOT
-  APARTMENT
-  VILLA
-  HOUSE
-  LAND
-  COMMERCIAL
-}
-
-enum PriceType {
-  FIXED
-  NEGOTIABLE
-}
-
-enum PaymentProvider {
-  RAZORPAY
-  DEV
-}
-
-enum PaymentStatus {
-  CREATED
-  INITIATED
-  PENDING
-  PAID
-  SUCCESS
-  FAILED
-  REFUNDED
-}
-
-enum AppointmentStatus {
-  PENDING
-  CONFIRMED
-  RESCHEDULED
-  COMPLETED
-  CANCELLED
 }

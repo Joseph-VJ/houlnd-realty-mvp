@@ -10,8 +10,6 @@
 
 import { useState } from 'react'
 import { usePostPropertyStore } from '@/stores/postPropertyStore'
-import { Button } from '@/components/ui/Button'
-import { Card, CardContent } from '@/components/ui/Card'
 
 export function Step5Photos() {
   const { formData, addImageFile, removeImageFile, nextStep, previousStep } = usePostPropertyStore()
@@ -77,139 +75,151 @@ export function Step5Photos() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Property Photos</h2>
-              <p className="text-gray-600 mt-2">
-                Upload high-quality images of your property (minimum 3, maximum 10)
-              </p>
-            </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900 mb-2">Property Photos</h2>
+            <p className="text-gray-600">
+              Upload high-quality images of your property (minimum 3, maximum 10)
+            </p>
+          </div>
 
-            {/* Upload Area */}
-            <div>
-              <label
-                htmlFor="image-upload"
-                className="block w-full p-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition cursor-pointer bg-gray-50 hover:bg-blue-50"
-              >
-                <div className="text-center">
-                  <div className="text-5xl mb-4">📸</div>
-                  <div className="text-lg font-semibold text-gray-700 mb-2">
-                    Click to upload or drag and drop
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    PNG, JPG, WEBP up to 5MB each
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    Images will be compressed automatically
-                  </div>
+          {/* Upload Area */}
+          <div>
+            <label
+              htmlFor="image-upload"
+              className="block w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:border-blue-500 transition-all cursor-pointer bg-gray-50 hover:bg-blue-50 hover:scale-[1.01]"
+            >
+              <div className="text-center">
+                <div className="text-5xl mb-4">📸</div>
+                <div className="text-lg font-bold text-gray-800 mb-2">
+                  Click to upload or drag and drop
                 </div>
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  disabled={uploading || imageCount >= 10}
-                />
-              </label>
-
-              {/* Upload Stats */}
-              <div className="flex justify-between items-center mt-3">
                 <div className="text-sm text-gray-600">
-                  {imageCount} / 10 images uploaded
+                  PNG, JPG, WEBP up to 5MB each
                 </div>
-                <div
-                  className={`text-sm font-medium ${
-                    isValid ? 'text-green-600' : 'text-orange-600'
-                  }`}
-                >
-                  {isValid ? '✓ Minimum requirement met' : '⚠ Need at least 3 images'}
+                <div className="text-xs text-gray-500 mt-1">
+                  Images will be compressed automatically
                 </div>
               </div>
-            </div>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={uploading || imageCount >= 10}
+              />
+            </label>
 
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                {error}
+            {/* Upload Stats */}
+            <div className="flex justify-between items-center mt-3">
+              <div className="text-sm text-gray-700 font-medium">
+                {imageCount} / 10 images uploaded
               </div>
-            )}
-
-            {/* Image Preview Grid */}
-            {formData.imageFiles && formData.imageFiles.length > 0 && (
-              <div>
-                <div className="text-sm font-medium text-gray-700 mb-3">
-                  Uploaded Images ({formData.imageFiles.length})
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {formData.imageFiles.map((file, index) => {
-                    const previewUrl = formData.imagePreviewUrls?.[index] || ''
-                    return (
-                      <div key={index} className="relative group">
-                        <div className="aspect-square relative overflow-hidden rounded-lg border-2 border-gray-200">
-                          <img
-                            src={previewUrl}
-                            alt={`Property ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          {index === 0 && (
-                            <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                              Main Photo
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeImageFile(index)}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
-                          title="Remove image"
-                        >
-                          ✕
-                        </button>
-                        <div className="text-xs text-gray-500 mt-1 text-center">
-                          {file.name.length > 20
-                            ? file.name.substring(0, 17) + '...'
-                            : file.name}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <p className="text-xs text-gray-500 mt-3">
-                  The first image will be used as the main photo. Hover over images to remove
-                  them.
-                </p>
+              <div
+                className={`text-sm font-bold ${
+                  isValid ? 'text-green-600' : 'text-orange-600'
+                }`}
+              >
+                {isValid ? '✓ Minimum requirement met' : '⚠ Need at least 3 images'}
               </div>
-            )}
-
-            {/* Tips */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="text-sm font-medium text-yellow-800 mb-2">
-                📌 Photo Tips for Better Results:
-              </div>
-              <ul className="text-xs text-yellow-700 space-y-1">
-                <li>✓ Use natural lighting for clear, bright images</li>
-                <li>✓ Include exterior shots, interior rooms, and key features</li>
-                <li>✓ Clean and declutter spaces before photographing</li>
-                <li>✓ Take photos from corners to show more space</li>
-                <li>✓ First image should be the best exterior/entrance shot</li>
-              </ul>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
+              {error}
+            </div>
+          )}
+
+          {/* Image Preview Grid */}
+          {formData.imageFiles && formData.imageFiles.length > 0 && (
+            <div>
+              <div className="text-sm font-bold text-gray-800 mb-3">
+                Uploaded Images ({formData.imageFiles.length})
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {formData.imageFiles.map((file, index) => {
+                  const previewUrl = formData.imagePreviewUrls?.[index] || ''
+                  return (
+                    <div key={index} className="relative group">
+                      <div className="aspect-square relative overflow-hidden rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all">
+                        <img
+                          src={previewUrl}
+                          alt={`Property ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        {index === 0 && (
+                          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                            Main Photo
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeImageFile(index)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                      <div className="text-xs text-gray-600 mt-1 text-center">
+                        {file.name.length > 20
+                          ? file.name.substring(0, 17) + '...'
+                          : file.name}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-600 mt-3">
+                The first image will be used as the main photo. Hover over images to remove
+                them.
+              </p>
+            </div>
+          )}
+
+          {/* Tips */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+            <div className="text-sm font-bold text-yellow-800 mb-2">
+              📌 Photo Tips for Better Results:
+            </div>
+            <ul className="text-sm text-yellow-700 space-y-1">
+              <li>✓ Use natural lighting for clear, bright images</li>
+              <li>✓ Include exterior shots, interior rooms, and key features</li>
+              <li>✓ Clean and declutter spaces before photographing</li>
+              <li>✓ Take photos from corners to show more space</li>
+              <li>✓ First image should be the best exterior/entrance shot</li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
       {/* Navigation */}
-      <div className="mt-6 flex justify-between">
-        <Button type="button" variant="outline" onClick={previousStep}>
-          ← Back
-        </Button>
-        <Button type="submit" size="lg" disabled={!isValid}>
-          Next: Availability →
-        </Button>
+      <div className="mt-6 flex justify-between gap-4">
+        <button
+          type="button"
+          onClick={previousStep}
+          className="flex items-center gap-2 px-8 py-3 border-2 border-gray-300 text-gray-700 rounded-full font-bold hover:bg-gray-50 transition-all"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+        <button
+          type="submit"
+          disabled={!isValid}
+          className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next: Availability
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
     </form>
   )

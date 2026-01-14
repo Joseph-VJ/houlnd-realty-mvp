@@ -17,6 +17,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/database.types'
+import { offlineVerifyToken } from '@/lib/offlineAuth'
 
 /**
  * Update the Supabase session in middleware
@@ -36,6 +37,23 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
+  // OFFLINE MODE: Verify JWT token
+  if (process.env.USE_OFFLINE === 'true') {
+    const token = request.cookies.get('offline_token')?.value
+    
+    if (token) {
+      const { valid } = await offlineVerifyToken(token)
+      
+      if (!valid) {
+        // Token is invalid, remove it
+        response.cookies.delete('offline_token')
+      }
+    }
+
+    return response
+  }
+
+  // ONLINE MODE: Use Supabase
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
